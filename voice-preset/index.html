@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>문체 프리셋 라이브러리 — 사업 아이디어</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  .deck{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#E9EDF3;overflow:hidden;}
+  .deck-inner{width:1600px;height:900px;flex:0 0 auto;position:relative;transform-origin:center center;box-shadow:0 30px 80px rgba(0,0,0,.35);} /* [v5-fix] flex:0 0 auto — 1600px보다 좁은 창에서 flex-shrink로 눌려 슬라이드가 우측 잘림·중앙이탈 되던 버그 수정 */
+  .slide{position:absolute;top:0;left:0;width:1600px;height:900px;display:none;overflow:hidden;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  .slide.active{display:block;animation:slideFade .18s ease;}
+  @keyframes slideFade{from{opacity:0;}to{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){.slide.active{animation:none;}}
+  .nav{position:fixed;bottom:14px;left:20px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:11px;color:rgba(0,0,0,.3);z-index:99;}
+  .hL{position:absolute;top:64px;left:96px;right:96px;display:flex;align-items:center;justify-content:space-between;z-index:8;}
+  .orgD{font-size:16px;font-weight:600;letter-spacing:0.08em;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:10px;}
+  .orgL{font-size:16px;font-weight:800;color:#0A1334;display:flex;align-items:center;gap:10px;}
+  .rlab{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.16em;}
+  .dT{position:absolute;top:118px;left:96px;right:96px;height:1px;z-index:8;}
+  .fL{position:absolute;bottom:60px;left:96px;right:96px;height:1px;z-index:8;}
+  .fT{position:absolute;bottom:28px;left:96px;right:96px;display:flex;justify-content:space-between;z-index:8;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.16em;}
+  .eyb{display:flex;align-items:center;gap:12px;}
+  .eyb .bar{width:36px;height:4px;background:#3551B5;display:inline-block;}
+  .eyb .lab{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.18em;color:#5A6885;}
+  .body{position:absolute;top:118px;bottom:96px;left:96px;right:96px;padding-top:36px;display:flex;flex-direction:column;box-sizing:border-box;z-index:2;}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:80px 80px;}
+  .rowline{display:flex;align-items:center;gap:28px;padding:20px 4px;border-top:1px solid #E8ECF3;}
+  .term{background:#0A1334;border-radius:14px;box-shadow:0 26px 64px -28px rgba(10,19,52,.5),0 4px 14px -6px rgba(10,19,52,.2);overflow:hidden;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
+  .term .bar2{display:flex;align-items:center;gap:7px;padding:12px 16px;background:#141F45;}
+  .term .dot{width:11px;height:11px;border-radius:50%;}
+  /* ── TUI 타이핑 애니메이션(부가 레이어) ── 기본 상태는 항상 전문 표시, JS가 있을 때만 잠깐 숨겼다 재생 */
+  .tuiT{transition:opacity .3s ease;}
+  .tuiThink{display:none;align-items:center;gap:3px;color:#93C5FD;margin:8px 0;}
+  .tuiThink.tuiThinkOn{display:flex;}
+  .tuiThink .tuiDot{display:inline-block;opacity:.25;animation:tuiDotPulse 1s ease-in-out infinite;}
+  .tuiThink .tuiDot:nth-child(3){animation-delay:.15s;}
+  .tuiThink .tuiDot:nth-child(4){animation-delay:.3s;}
+  @keyframes tuiDotPulse{0%,100%{opacity:.25;}50%{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){
+    .tuiThink .tuiDot{animation:none !important;opacity:1 !important;}
+  }
+  /* ── 등장 애니메이션(부가 레이어, 2026-07-04 추가) ── 기본 상태는 항상 전문 표시.
+     JS가 정상 동작할 때만 슬라이드 진입 순간 잠깐 숨겼다 순차/카운트업으로 재생.
+     render()를 한 번 더 감싸서 훅을 걸며, TUI 엔진·발표자 모드 코드는 전혀 건드리지 않는다. */
+  .rvItem{transition:opacity .45s ease, transform .45s ease;}
+  .rvCount{font-variant-numeric:tabular-nums;}
+  @media (prefers-reduced-motion: reduce){
+    .rvItem{transition:none !important;}
+  }
+  @media print{
+    .rvItem{opacity:1 !important;transform:none !important;}
+  }
+  @media print{
+    .slide.active{animation:none !important;}
+    .tuiThink{display:none !important;}
+    .tuiT{opacity:1 !important;}
+    @page{size:1600px 900px;margin:0;}
+    html,body{background:#E9EDF3;}
+    .deck{display:block;width:auto;height:auto;background:#E9EDF3;}
+    .deck-inner{position:static;transform:none !important;width:1600px;height:auto;box-shadow:none;}
+    .slide{position:relative !important;display:block !important;width:1600px;height:900px;page-break-after:always;break-after:page;box-shadow:none;}
+    .slide:last-of-type{page-break-after:auto;break-after:auto;}
+    .nav{display:none !important;}
+    #presenterRoot,#popupWarn,#blackoutOverlay,#helpOverlay,.pMiniToast{display:none !important;}
+  }
+  /* ── 발표자 모드 (Presenter View) ── */
+  body.presenter-mode .deck{display:none;}
+  body.presenter-mode{background:#0A1334;}
+  #presenterRoot{position:fixed;inset:0;background:#0A1334;color:#fff;display:flex;flex-direction:column;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;padding:22px;box-sizing:border-box;gap:10px;z-index:10;--thumbW:224px;--nextW:240px;overflow-y:auto;}
+  .pTop{display:flex;gap:20px;flex:0 1 220px;min-height:100px;}
+  .pCurrentWrap{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .pNextWrap{flex:0 0 var(--nextW);display:flex;flex-direction:column;min-width:0;}
+  /* ── 좌우 드래그 리사이저: 현재↔다음 슬라이드 폭 비율 조정 ── */
+  .pHSplitter{flex:0 0 8px;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:col-resize;border-radius:6px;}
+  .pHSplitter:hover,body.pHSplitterDragging .pHSplitter{background:rgba(139,157,239,.14);}
+  .pHSplitter span{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.32);pointer-events:none;}
+  .pHSplitter:hover span,body.pHSplitterDragging .pHSplitter span{background:#8B9DEF;}
+  body.pHSplitterDragging{cursor:col-resize;user-select:none;}
+  .pTag{font-size:13px;font-weight:700;letter-spacing:.14em;color:#8B9DEF;margin-bottom:8px;text-transform:uppercase;flex:0 0 auto;}
+  .pTagKo{letter-spacing:.02em;text-transform:none;}
+  /* 현재/다음 슬라이드 박스: 레터박스 제거 — 실제 16:9 크기로 JS가 맞춰줌(updateStage) */
+  .pStageOuter{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;min-width:0;}
+  .pStage{flex:0 0 auto;background:#000;border-radius:10px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.14);}
+  .pStageSmall{opacity:.88;}
+  .pDeckInnerClone{width:1600px;height:900px;position:absolute;top:0;left:0;transform-origin:top left;}
+  .pBottom{flex:0 0 auto;display:flex;flex-direction:column;gap:12px;}
+  /* ── 상하 드래그 리사이저: 위/아래로 끌어 현재슬라이드↔필름스트립 비율 조정 ── */
+  .pSplitter{flex:0 0 10px;display:flex;align-items:center;justify-content:center;gap:5px;cursor:row-resize;border-radius:6px;}
+  .pSplitter:hover,body.pSplitterDragging .pSplitter{background:rgba(139,157,239,.14);}
+  .pSplitter span{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.32);pointer-events:none;}
+  .pSplitter:hover span,body.pSplitterDragging .pSplitter span{background:#8B9DEF;}
+  body.pSplitterDragging{cursor:row-resize;user-select:none;}
+  /* ── 필름스트립(전체 흐름): 기본값 = 크게 표시. 상단 영역은 드래그/토글로 조정 ── */
+  .pFilmstripWrap{flex:1;display:flex;flex-direction:column;min-height:80px;overflow:hidden;}
+  .pFilmstripHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex:0 0 auto;gap:14px;flex-wrap:wrap;}
+  .pFilmstripHeaderLeft{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .pSizeCtrl{display:flex;align-items:center;gap:8px;}
+  .pSizeLabel{font-size:12px;font-weight:700;letter-spacing:.1em;color:#7A88B8;text-transform:uppercase;white-space:nowrap;}
+  .pSizeIcon{font-size:15px;font-weight:700;color:#8B9DEF;line-height:1;user-select:none;}
+  #pThumbSize{width:130px;accent-color:#8B9DEF;cursor:pointer;}
+  .pToggleBtn{background:#1B2A5E;color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;cursor:pointer;}
+  .pToggleBtn:hover{background:#243875;}
+  .pFilmstrip{flex:1;display:flex;flex-wrap:wrap;gap:10px;overflow-y:auto;overflow-x:hidden;align-content:flex-start;padding:6px;border-radius:10px;background:rgba(255,255,255,.03);min-height:0;}
+  .pThumb{position:relative;flex:0 0 auto;width:var(--thumbW);height:calc(var(--thumbW) * 9 / 16);border-radius:8px;overflow:hidden;border:3px solid rgba(255,255,255,.14);background:#000;cursor:pointer;padding:0;}
+  .pThumb:hover{border-color:rgba(139,157,239,.6);}
+  .pThumb.pThumbCurrent{border-color:#8B9DEF;border-width:4px;box-shadow:0 0 0 4px rgba(139,157,239,.35);}
+  .pThumbStage{width:var(--thumbW);height:calc(var(--thumbW) * 9 / 16);position:relative;overflow:hidden;}
+  .pThumbNum{position:absolute;left:6px;bottom:5px;font-size:14px;font-weight:700;color:#fff;background:rgba(0,0,0,.65);border-radius:5px;padding:3px 8px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;pointer-events:none;}
+  .pNotesWrap{position:relative;}
+  .pNotes{background:#141F45;border-radius:12px;padding:22px 26px;font-size:22px;line-height:1.6;color:#EAF0FF;min-height:70px;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:keep-all;font-weight:400;}
+  .pNotes.pEmpty{color:#8FA3C8;font-style:italic;font-size:18px;}
+  /* [개선 18] 노트 글씨 크기 조절 버튼 — hover 시 선명 */
+  .pNoteSize{position:absolute;right:14px;top:10px;display:flex;gap:6px;opacity:.5;transition:opacity .15s ease;}
+  .pNotesWrap:hover .pNoteSize{opacity:1;}
+  .pNoteSize button{background:#1B2A5E;color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;cursor:pointer;}
+  .pNoteSize button:hover{background:#243875;}
+  /* [개선 19] 노트 큐 자동 하이라이트: ⏰ 컷라인=주황 · ⚠️ 주의=빨강 · 백업=파랑 */
+  .pCueTime{color:#FFC46B;font-weight:600;}
+  .pCueWarn{color:#FF9B9B;font-weight:600;}
+  .pCueBackup{color:#8FC6FF;}
+  .pControls{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .pCounter{font-size:20px;font-weight:700;color:#fff;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  .pTimer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  /* [개선 12] 현재 시각 시계 */
+  .pClock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;font-weight:600;color:#B9C6EF;padding-right:12px;border-right:1px solid rgba(255,255,255,.14);}
+  .pTimerDisplay{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;font-weight:700;color:#8B9DEF;min-width:96px;display:inline-block;}
+  /* [개선 13] 타이머 작동 중 초록색으로 상태 표시 */
+  .pTimerDisplay.running{color:#7FE0A8;}
+  /* [개선 17] 목표 시간 대비 남은 시간 칩 — 5분 전 주황, 초과 빨강 */
+  .pTimerRemain{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700;color:#B9C6EF;background:rgba(255,255,255,.06);border-radius:8px;padding:6px 11px;}
+  .pTimerRemain.soon{color:#FFC46B;}
+  .pTimerRemain.over{color:#fff;background:#C2402A;}
+  .pTimer button,.pNav button,.pCtlBtn{background:#1B2A5E;color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 16px;font-size:15px;font-weight:600;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;cursor:pointer;}
+  .pTimer button:hover,.pNav button:hover,.pCtlBtn:hover{background:#243875;}
+  #pTimerToggle.on{background:#1E5A3C;border-color:rgba(127,224,168,.4);}
+  /* [개선 16] 리셋 오조작 방지 — 두 번째 확인 상태는 빨강 */
+  #pTimerReset.armed{background:#C2402A;border-color:#C2402A;}
+  #pTargetInput{width:64px;background:#0F1A40;color:#fff;border:1px solid rgba(139,157,239,.5);border-radius:8px;padding:9px 10px;font-size:15px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  .pNav{display:flex;gap:10px;}
+  .pNav button:disabled{opacity:.35;cursor:default;}
+  /* [개선 27] 키보드 포커스 링 — 접근성 */
+  .pTimer button:focus-visible,.pNav button:focus-visible,.pCtlBtn:focus-visible,.pToggleBtn:focus-visible,.pNoteSize button:focus-visible,.pThumb:focus-visible{outline:2px solid #8B9DEF;outline-offset:2px;}
+  /* [개선 21] 진행률 바 */
+  #pProgress{position:fixed;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.08);z-index:40;}
+  #pProgressFill{height:100%;width:0;background:linear-gradient(90deg,#3551B5,#8B9DEF);transition:width .25s ease;}
+  /* [개선 8] 첫 실행 온보딩 배너 */
+  #pOnboard{background:#1B2A5E;border:1px solid rgba(139,157,239,.4);border-radius:10px;padding:12px 18px;font-size:15px;line-height:1.5;color:#EAF0FF;display:flex;align-items:center;gap:14px;flex:0 0 auto;}
+  #pOnboard strong{color:#B9C6EF;}
+  #pOnboard button{margin-left:auto;background:#3551B5;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  /* [개선 9] 강의장 화면 연결 상태 칩 */
+  .pConnChip{font-size:13px;font-weight:600;color:#8A96BD;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 13px;white-space:nowrap;}
+  .pConnChip.ok{color:#7FE0A8;border-color:rgba(127,224,168,.35);}
+  /* [개선 5] 블랙아웃 상태 칩 — 켜져 있는 동안 깜빡여서 잊지 않게 */
+  .pBlackChip{font-size:13px;font-weight:700;color:#0A1334;background:#FFC46B;border-radius:999px;padding:6px 13px;white-space:nowrap;animation:pBlink 1.6s ease-in-out infinite;}
+  @keyframes pBlink{0%,100%{opacity:1;}50%{opacity:.55;}}
+  /* [개선 23] 현재 슬라이드 클릭 네비게이션 */
+  .pClickNav{cursor:pointer;}
+  .pTagHint{font-weight:500;letter-spacing:0;text-transform:none;color:#8FA3C8;font-size:12px;}
+  /* [개선 20] 마지막 슬라이드 카드 — 빈 검정 박스 대신 */
+  .pEndCard{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700;color:#8B9DEF;background:#101B3F;text-align:center;line-height:1.6;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  /* [개선 22] 노트 있는 슬라이드 ✎ 배지 (필름스트립) */
+  .pThumbNoteDot{position:absolute;right:6px;top:5px;font-size:11px;font-weight:700;color:#0A1334;background:#FFC46B;border-radius:5px;padding:2px 6px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;pointer-events:none;}
+  /* [개선 5] 블랙아웃 오버레이 (청중 창) */
+  #blackoutOverlay{position:fixed;inset:0;z-index:9998;opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  #blackoutOverlay.on{opacity:1;pointer-events:auto;cursor:pointer;}
+  /* [개선 3·4] 미니 토스트 — 숫자 점프·경계 안내 */
+  .pMiniToast{position:fixed;left:50%;top:24px;transform:translateX(-50%) translateY(-8px);background:rgba(10,19,52,.92);color:#fff;border:1px solid rgba(139,157,239,.4);padding:10px 20px;border-radius:999px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:15px;font-weight:600;z-index:9999;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
+  .pMiniToast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  /* [개선 7] 단축키 도움말 오버레이 */
+  #helpOverlay{position:fixed;inset:0;z-index:9999;background:rgba(4,8,24,.72);display:none;align-items:center;justify-content:center;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;cursor:pointer;backdrop-filter:blur(3px);}
+  #helpOverlay.on{display:flex;}
+  .pHelpCard{background:#0F1A40;border:1px solid rgba(139,157,239,.35);border-radius:16px;padding:28px 34px;color:#fff;max-width:600px;box-shadow:0 24px 60px rgba(0,0,0,.5);}
+  .pHelpTitle{font-size:19px;font-weight:800;margin-bottom:14px;letter-spacing:.02em;}
+  .pHelpCard table{border-collapse:collapse;width:100%;}
+  .pHelpCard td{padding:7px 0;font-size:15px;color:#DCE4FA;line-height:1.45;vertical-align:top;}
+  .pHelpCard td.pKey{color:#8B9DEF;font-weight:700;padding-right:22px;white-space:nowrap;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;}
+  .pHelpHint{margin-top:14px;font-size:12.5px;color:#8FA3C8;}
+  /* [개선 10] 팝업 차단 안내 + 원클릭 재시도 */
+  #popupWarn{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0A1334;color:#fff;padding:14px 22px;border-radius:10px;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:15px;z-index:9999;box-shadow:0 12px 30px rgba(0,0,0,.35);display:none;max-width:560px;text-align:center;line-height:1.5;}
+  #popupWarn button{margin-top:10px;background:#3551B5;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+  /* [개선 26] 발표자 모드 버튼 — 기본 선명, 아이들 시에만 숨김 */
+  #presenterBtn{position:fixed;right:20px;bottom:16px;z-index:60;background:rgba(10,19,52,.72);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 16px;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:12px;font-weight:600;letter-spacing:.03em;cursor:pointer;opacity:.85;transition:opacity .5s ease;}
+  #presenterBtn:hover{opacity:1;}
+  body.presenter-mode #presenterBtn{display:none;}
+  body.presenter-mode .nav{display:none;} /* [v5-CCO] 발표자 창에 청중용 힌트바 노출 방지 */
+  @media print{#presenterBtn{display:none !important;}}
+  /* [개선 24·25] 청중 창: 4초 아이들 시 하단 힌트·버튼 페이드 + 커서 숨김 */
+  .nav{transition:opacity .5s ease;}
+  body.uiIdle .nav,body.uiIdle #presenterBtn{opacity:0;pointer-events:none;}
+  body.uiIdle:not(.presenter-mode){cursor:none;}
+  /* ── 발표자 창 라이트 테마 (☀️ 토글, localStorage 기억) — 밝은 강의장용 ── */
+  body.presenter-mode.pLight{background:#F5F8FF;}
+  body.pLight #presenterRoot{background:#F5F8FF;color:#0A1334;}
+  body.pLight #pProgress{background:rgba(10,19,52,.08);}
+  body.pLight #pOnboard{background:#fff;border-color:#C9D4EA;color:#1A2547;}
+  body.pLight #pOnboard strong{color:#3551B5;}
+  body.pLight .pTag{color:#3551B5;}
+  body.pLight .pTagHint{color:#6A7796;}
+  body.pLight .pHSplitter:hover,body.pLight.pHSplitterDragging .pHSplitter,body.pLight .pSplitter:hover,body.pLight.pSplitterDragging .pSplitter{background:rgba(53,81,181,.12);}
+  body.pLight .pHSplitter span,body.pLight .pSplitter span{background:rgba(10,19,52,.3);}
+  body.pLight .pHSplitter:hover span,body.pLight .pSplitter:hover span{background:#3551B5;}
+  body.pLight .pStage{border-color:rgba(10,19,52,.18);}
+  body.pLight .pFilmstrip{background:rgba(10,19,52,.05);}
+  body.pLight .pThumb{border-color:rgba(10,19,52,.15);}
+  body.pLight .pThumb:hover{border-color:rgba(53,81,181,.55);}
+  body.pLight .pThumb.pThumbCurrent{border-color:#3551B5;box-shadow:0 0 0 4px rgba(53,81,181,.25);}
+  body.pLight .pSizeLabel{color:#5A6885;}
+  body.pLight .pSizeIcon{color:#3551B5;}
+  body.pLight #pThumbSize{accent-color:#3551B5;}
+  body.pLight .pToggleBtn,body.pLight .pTimer button,body.pLight .pNav button,body.pLight .pNoteSize button,body.pLight .pCtlBtn{background:#fff;border-color:#C9D4EA;color:#0A1334;}
+  body.pLight .pToggleBtn:hover,body.pLight .pTimer button:hover,body.pLight .pNav button:hover,body.pLight .pNoteSize button:hover,body.pLight .pCtlBtn:hover{background:#EEF1FA;}
+  body.pLight .pNotes{background:#fff;color:#1A2547;border:1px solid #D8E0F0;}
+  body.pLight .pNotes.pEmpty{color:#6A7796;}
+  body.pLight .pCueTime{color:#B36B00;}
+  body.pLight .pCueWarn{color:#C2402A;}
+  body.pLight .pCueBackup{color:#1D5FBF;}
+  body.pLight .pCounter{color:#0A1334;}
+  body.pLight .pClock{color:#5A6885;border-right-color:rgba(10,19,52,.18);}
+  body.pLight .pTimerDisplay{color:#3551B5;}
+  body.pLight .pTimerDisplay.running{color:#1E7A4C;}
+  body.pLight .pTimerRemain{background:rgba(10,19,52,.06);color:#33415E;}
+  body.pLight .pTimerRemain.soon{color:#B36B00;}
+  body.pLight .pTimerRemain.over{color:#fff;background:#C2402A;}
+  body.pLight #pTimerToggle.on{background:#DFF5E7;border-color:#1E7A4C;color:#1E7A4C;}
+  body.pLight #pTimerReset.armed{background:#C2402A;border-color:#C2402A;color:#fff;}
+  body.pLight #pTargetInput{background:#fff;color:#0A1334;border-color:#C9D4EA;}
+  body.pLight .pConnChip{color:#6A7796;background:rgba(10,19,52,.04);border-color:rgba(10,19,52,.15);}
+  body.pLight .pConnChip.ok{color:#1E7A4C;border-color:rgba(30,122,76,.4);}
+  body.pLight .pEndCard{background:#EEF1FA;color:#3551B5;}
+  body.pLight .pFilmstrip{background:#E9EEF8;}
+  body.pLight .pStage{box-shadow:0 10px 30px -14px rgba(10,19,52,.3);}
+  body.pLight .pNotes{box-shadow:0 1px 3px rgba(10,19,52,.06);}
+  body.pLight .pNextNote{background:rgba(10,19,52,.04);}
+  /* ── v3 개선 CSS ── */
+  #presenterRoot{user-select:none;}
+  .pNotes{user-select:text;}
+  .pCtrlSep{width:1px;height:26px;background:rgba(255,255,255,.14);flex:0 0 auto;}
+  body.pLight .pCtrlSep{background:rgba(10,19,52,.15);}
+  .pDwell{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:#8A96BD;}
+  body.pLight .pDwell{color:#6A7796;}
+  .pCounter{cursor:pointer;}
+  .pTimerDisplay{cursor:pointer;}
+  .pTimerDisplay.overrun{color:#FF9B9B;animation:pBlink 1.2s ease-in-out infinite;}
+  body.pLight .pTimerDisplay.overrun{color:#C2402A;}
+  .pNextNote{margin-top:6px;font-size:13px;line-height:1.5;color:#8FA3C8;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body.pLight .pNextNote{color:#5A6885;background:rgba(10,19,52,.05);}
+  .pNotes.folded{max-height:38px;min-height:0;padding:8px 26px;overflow:hidden;opacity:.65;}
+  .pFilmstripHeaderRight{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .pHelpCard{position:relative;}
+  .pHelpClose{position:absolute;right:14px;top:12px;background:none;border:none;color:#8B9DEF;font-size:16px;cursor:pointer;padding:6px;line-height:1;}
+  .pHelpSec{padding-top:14px;font-size:11.5px;letter-spacing:.14em;color:#8B9DEF;font-weight:800;}
+  .pMiniToast.bad{border-color:#C2402A;color:#FF9B9B;}
+  #pTooSmall{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:#C2402A;color:#fff;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:700;z-index:50;display:none;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  body.pBlackOn #pCurClick .pStage{outline:3px solid #FFC46B;}
+  .nav button{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:underline;}
+
+  /* ═══ v4 트렌디 스킨 (2026-07-12) — 인디고→바이올렛 악센트 · 뉴트럴 배경 · 마이크로 인터랙션 ═══ */
+  /* [v4-1] 팔레트: 다크 = 딥 인디고 나이트 */
+  body.presenter-mode{background:#0D0F1E;}
+  #presenterRoot{background:#0D0F1E;}
+  .pTag{color:#8A93F8;}
+  /* [v4-2] 컨트롤바 = 플로팅 독 카드 */
+  .pControls{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 16px;}
+  /* [v4-3] 버튼 마이크로 인터랙션: 호버 lift + 그림자 + 부드러운 전환 */
+  .pTimer button,.pNav button,.pCtlBtn,.pToggleBtn,.pNoteSize button{background:#1A1E36;border:1px solid rgba(255,255,255,.1);border-radius:10px;transition:background .15s ease,transform .15s ease,box-shadow .15s ease;}
+  .pTimer button:hover,.pNav button:hover,.pCtlBtn:hover,.pToggleBtn:hover,.pNoteSize button:hover{background:#232848;transform:translateY(-1px);box-shadow:0 4px 12px -4px rgba(0,0,0,.45);}
+  .pNav button:disabled{transform:none;box-shadow:none;}
+  /* [v4-4] 현재 썸네일 = 모던 링 + 살짝 확대 / [v4-5] 썸네일 호버 리프트 */
+  .pThumb{border-radius:10px;border:2px solid rgba(255,255,255,.1);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;}
+  .pThumb:hover{transform:translateY(-2px);border-color:rgba(168,85,247,.55);box-shadow:0 8px 18px -8px rgba(0,0,0,.5);}
+  .pThumb.pThumbCurrent{border-width:2px;border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.35),0 10px 24px -10px rgba(99,102,241,.55);transform:scale(1.02);}
+  /* [v4-6] 진행률 바: 그라데이션 + 글로우 */
+  #pProgressFill{background:linear-gradient(90deg,#6366F1,#A855F7);box-shadow:0 0 10px rgba(139,92,246,.55);}
+  /* [v4-7] 온보딩 = 그라데이션 카드 */
+  #pOnboard{background:linear-gradient(135deg,#4F46E5,#8B5CF6);border:none;color:#fff;box-shadow:0 10px 28px -10px rgba(79,70,229,.55);}
+  #pOnboard strong{color:#fff;}
+  #pOnboard button{background:rgba(255,255,255,.18);}
+  #pOnboard button:hover{background:rgba(255,255,255,.3);}
+  /* [v4-8] 노트 카드: 좌측 악센트 바 + 라운드 업 */
+  .pNotes{background:#151932;border-radius:14px;border-left:3px solid #6366F1;}
+  .pNextNote{background:rgba(255,255,255,.05);}
+  /* [v4-9] 타이머 상태색 현대화: 러닝 = 에메랄드 그라데이션 */
+  .pTimerDisplay{color:#8A93F8;}
+  .pTimerDisplay.running{color:#34D399;}
+  #pTimerToggle.on{background:linear-gradient(135deg,#059669,#10B981);border:none;}
+  .pCtlBtn.on{background:#4F46E5;border-color:rgba(255,255,255,.25);} /* [UX] 툴 버튼 활성 상태 */
+  body.pLight .pCtlBtn.on{background:#4F46E5;color:#fff;border-color:#4F46E5;}
+  .pConnChip.ok{color:#34D399;border-color:rgba(52,211,153,.35);}
+  .pStage{border-radius:14px;}
+  .pFilmstrip{border-radius:14px;}
+  /* [v4-10] 커스텀 스크롤바: 얇고 라운드 */
+  .pFilmstrip::-webkit-scrollbar,.pNotes::-webkit-scrollbar,#presenterRoot::-webkit-scrollbar{width:8px;height:8px;}
+  .pFilmstrip::-webkit-scrollbar-thumb,.pNotes::-webkit-scrollbar-thumb,#presenterRoot::-webkit-scrollbar-thumb{background:rgba(138,147,248,.3);border-radius:99px;}
+  .pFilmstrip::-webkit-scrollbar-thumb:hover,.pNotes::-webkit-scrollbar-thumb:hover{background:rgba(138,147,248,.55);}
+  .pFilmstrip::-webkit-scrollbar-track,.pNotes::-webkit-scrollbar-track,#presenterRoot::-webkit-scrollbar-track{background:transparent;}
+  /* ── v4 라이트 변형 ── */
+  body.presenter-mode.pLight{background:#F4F5FA;}
+  body.pLight #presenterRoot{background:#F4F5FA;color:#12172B;}
+  body.pLight .pTag{color:#4F46E5;}
+  body.pLight .pControls{background:#fff;border-color:#E4E7F2;box-shadow:0 2px 12px -6px rgba(18,23,43,.1);}
+  body.pLight .pTimer button,body.pLight .pNav button,body.pLight .pCtlBtn,body.pLight .pToggleBtn,body.pLight .pNoteSize button{background:#fff;border-color:#E2E5F0;color:#1A2035;box-shadow:0 1px 2px rgba(18,23,43,.05);}
+  body.pLight .pTimer button:hover,body.pLight .pNav button:hover,body.pLight .pCtlBtn:hover,body.pLight .pToggleBtn:hover,body.pLight .pNoteSize button:hover{background:#F6F7FE;box-shadow:0 4px 12px -4px rgba(79,70,229,.18);}
+  body.pLight .pThumb{border-color:#E2E5F0;background:#fff;}
+  body.pLight .pThumb:hover{border-color:rgba(147,51,234,.45);box-shadow:0 8px 18px -8px rgba(18,23,43,.2);}
+  body.pLight .pThumb.pThumbCurrent{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.22),0 10px 22px -10px rgba(79,70,229,.4);}
+  body.pLight #pProgress{background:rgba(18,23,43,.06);}
+  body.pLight #pProgressFill{background:linear-gradient(90deg,#4F46E5,#9333EA);box-shadow:none;}
+  body.pLight #pOnboard{background:linear-gradient(135deg,#4F46E5,#8B5CF6);color:#fff;border:none;}
+  body.pLight #pOnboard strong{color:#fff;}
+  body.pLight .pNotes{background:#fff;border:1px solid #E4E7F2;border-left:3px solid #4F46E5;box-shadow:0 1px 3px rgba(18,23,43,.06);}
+  body.pLight .pNextNote{background:#EEF0F9;color:#5B6478;}
+  body.pLight .pTimerDisplay{color:#4F46E5;}
+  body.pLight .pTimerDisplay.running{color:#059669;}
+  body.pLight .pTimerRemain{background:#EEF0F9;color:#3A4257;}
+  body.pLight .pConnChip.ok{color:#059669;border-color:rgba(5,150,105,.35);}
+  body.pLight .pCtrlSep{background:#E2E5F0;}
+  body.pLight .pClock{color:#5B6478;border-right-color:#E2E5F0;}
+  body.pLight .pCounter{color:#12172B;}
+  body.pLight .pStage{border-color:#E2E5F0;box-shadow:0 14px 34px -18px rgba(18,23,43,.3);}
+  body.pLight .pFilmstrip{background:#ECEEF6;}
+  body.pLight .pFilmstrip::-webkit-scrollbar-thumb,body.pLight .pNotes::-webkit-scrollbar-thumb{background:rgba(79,70,229,.25);}
+  body.pLight .pFilmstrip::-webkit-scrollbar-thumb:hover,body.pLight .pNotes::-webkit-scrollbar-thumb:hover{background:rgba(79,70,229,.45);}
+  /* v4 마감: 도움말·팝업경고·토스트도 새 팔레트로 */
+  .pHelpCard{background:#151932;border-color:rgba(138,147,248,.3);}
+  .pHelpCard td.pKey{color:#8A93F8;}
+  .pHelpTitle{color:#fff;}
+  #popupWarn{background:#151932;}
+  #popupWarn button{background:#4F46E5;}
+  #popupWarn button:hover{background:#6366F1;}
+  #pOnboardOk{background:rgba(255,255,255,.18);}
+  .pMiniToast{background:rgba(13,15,30,.94);border-color:rgba(138,147,248,.4);}
+
+  /* ═══ v5 커뮤니티 피드백 반영 (2026-07-12) — 판서 · 쉬는시간 화면 · BGM · 돋보기 ═══ */
+  /* [v5-1] 판서 캔버스: 청중 창은 deck-inner 안(1600×900, deck 스케일을 그대로 상속) / 발표자 창은 현재 슬라이드 박스 위 */
+  #inkCanvas{position:absolute;top:0;left:0;width:1600px;height:900px;z-index:900;pointer-events:none;}
+  body.inkOn #inkCanvas{pointer-events:auto;cursor:crosshair;}
+  #pInkCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;}
+  body.inkOn #pInkCanvas{pointer-events:auto;cursor:crosshair;}
+  /* [v5-2] 판서 툴바 — 판서 모드일 때만 하단 중앙 플로팅 독 */
+  #inkBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:none;align-items:center;gap:7px;background:rgba(13,15,30,.94);border:1px solid rgba(138,147,248,.45);border-radius:999px;padding:9px 16px;z-index:9990;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.45);}
+  body.inkOn #inkBar{display:flex;}
+  body.presenter-mode #inkBar{bottom:96px;} /* [UX] 발표자 창 컨트롤바와 겹침 방지 */
+  .inkKbd{opacity:.5;font-size:10.5px;font-weight:800;margin-left:5px;font-family:ui-monospace,Menlo,monospace;}
+  body.inkOn.inkErase #inkCanvas,body.inkOn.inkErase #pInkCanvas{cursor:cell;} /* [UX] 지우개 커서 구분 */
+  .inkBtn{background:transparent;border:1px solid transparent;border-radius:999px;color:#DCE4FA;font-family:inherit;font-size:13.5px;font-weight:600;padding:7px 12px;cursor:pointer;white-space:nowrap;}
+  .inkBtn:hover{background:rgba(255,255,255,.08);}
+  .inkBtn.on{background:#4F46E5;color:#fff;border-color:rgba(255,255,255,.2);}
+  .inkSep{width:1px;height:20px;background:rgba(255,255,255,.16);flex:0 0 auto;}
+  .inkSwatch{width:21px;height:21px;border-radius:50%;border:2px solid rgba(255,255,255,.28);cursor:pointer;padding:0;flex:0 0 auto;transition:transform .12s ease,box-shadow .12s ease;}
+  .inkSwatch:hover{transform:scale(1.12);}
+  .inkSwatch.on{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.3);transform:scale(1.12);}
+  /* [v5-3] 쉬는 시간(B) 커스텀 화면 — BREAK_SCREEN 설정 시 검은 화면 대신 안내 화면 */
+  .boWrap{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#fff;padding:40px;}
+  #blackoutOverlay.boCustom .boWrap{display:flex;}
+  .boLogoText{font-size:16px;font-weight:800;letter-spacing:.3em;color:rgba(255,255,255,.55);}
+  .boLogoImg{max-height:64px;max-width:340px;object-fit:contain;}
+  .boTitle{font-size:58px;font-weight:800;line-height:1.3;word-break:keep-all;}
+  .boSub{font-size:24px;font-weight:300;color:rgba(255,255,255,.65);line-height:1.6;word-break:keep-all;}
+  .boClock{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:30px;font-weight:600;color:rgba(255,255,255,.8);margin-top:6px;}
+  .boQrBox{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:8px;}
+  .boQr{width:170px;height:170px;object-fit:contain;background:#fff;border-radius:14px;padding:10px;}
+  .boQrLabel{font-size:16px;font-weight:600;color:rgba(255,255,255,.7);}
+  #boBgmBtn{margin-top:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);border-radius:999px;color:#fff;font-family:inherit;font-size:15px;font-weight:600;padding:10px 22px;cursor:pointer;}
+  #boBgmBtn:hover{background:rgba(255,255,255,.2);}
+  /* [v5-4] 마우스 돋보기 (M) — 청중 창 */
+  #magLens{position:fixed;width:340px;height:340px;border-radius:50%;border:3px solid rgba(99,102,241,.9);box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.5);overflow:hidden;z-index:9980;pointer-events:none;display:none;background:#fff;}
+  #magLens .magInner{width:1600px;height:900px;position:absolute;top:0;left:0;transform-origin:0 0;}
+  #magLens .magSlideClone{display:block;position:absolute;top:0;left:0;width:1600px;height:900px;overflow:hidden;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  #magChip{position:fixed;z-index:9981;background:rgba(13,15,30,.9);color:#fff;border-radius:999px;padding:5px 12px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:12.5px;font-weight:700;pointer-events:none;display:none;}
+  /* [v5.2] ☕ 쉬는화면 설정 모달 — 코드 수정 없이 발표자 창에서 꾸미기 */
+  #breakCfgOverlay{position:fixed;inset:0;z-index:9999;background:rgba(4,8,24,.72);display:none;align-items:center;justify-content:center;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;backdrop-filter:blur(3px);}
+  #breakCfgOverlay.on{display:flex;}
+  .bcCard{background:#151932;border:1px solid rgba(138,147,248,.3);border-radius:16px;padding:26px 30px;color:#fff;width:540px;max-width:92vw;max-height:86vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5);}
+  .bcTitle{font-size:18px;font-weight:800;margin-bottom:6px;}
+  .bcHint{font-size:12.5px;color:#8FA3C8;margin-bottom:16px;line-height:1.55;}
+  .bcRow{margin-bottom:12px;}
+  .bcRow>label{display:block;font-size:12.5px;font-weight:700;color:#8A93F8;margin-bottom:5px;}
+  .bcRow input[type=text]{width:100%;background:#0F1A40;color:#fff;border:1px solid rgba(139,157,239,.4);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;box-sizing:border-box;}
+  .bcInline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .bcCheck{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer;}
+  .bcCheck input{accent-color:#6366F1;width:16px;height:16px;}
+  .bcThumb{height:40px;border-radius:6px;background:#fff;padding:3px;display:none;}
+  .bcPresets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .bcPreset{background:#1A1E36;color:#DCE4FA;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;}
+  .bcPreset:hover{background:#232848;border-color:rgba(138,147,248,.5);}
+  .bcPreset.on{background:#4F46E5;color:#fff;border-color:transparent;}
+  body.pLight .bcPreset.on{background:#4F46E5;color:#fff;}
+  body.pLight .bcPreset{background:#F6F7FE;color:#1A2035;border-color:#E2E5F0;}
+  body.pLight .bcPreset:hover{background:#EEF0F9;}
+  .bcActions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .bcBtn{background:#4F46E5;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;}
+  .bcBtn:hover{background:#6366F1;}
+  .bcBtn.ghost{background:#1A1E36;color:#fff;border:1px solid rgba(255,255,255,.14);}
+  .bcBtn.ghost:hover{background:#232848;}
+  body.pLight .bcCard{background:#fff;color:#12172B;border-color:#E4E7F2;}
+  body.pLight .bcRow input[type=text]{background:#fff;color:#0A1334;border-color:#C9D4EA;}
+  body.pLight .bcHint{color:#5B6478;}
+  body.pLight .bcBtn.ghost{background:#F6F7FE;color:#1A2035;border-color:#E2E5F0;}
+  /* [v5.1] Z — 구역 확대: 드래그한 영역을 화면에 꽉 채움 */
+  .zoomAnim{transition:transform .4s cubic-bezier(.22,.61,.36,1);}
+  body.zoomSelMode #inkCanvas,body.zoomSelMode #pInkCanvas{pointer-events:auto;cursor:zoom-in;}
+  @media print{
+    #inkCanvas,#inkBar,#magLens,#magChip{display:none !important;}
+  }
+
+</style></head>
+<body><div class="deck"><div class="deck-inner" id="inner">
+
+<!-- ▼▼▼ 여기부터 여러분의 슬라이드로 교체하세요 (각 슬라이드 = <section class="slide">, 1600×900 기준) ▼▼▼ -->
+<!-- 01 표지 -->
+<section class="slide active" style="background:#0A1334;color:#fff;">
+  <div class="grid" style="opacity:.5;"></div>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:0 160px;">
+    <div style="font-size:14px;font-weight:700;letter-spacing:.3em;color:#8B9DEF;">사업 아이디어 · 대표의 지적 자산</div>
+    <div style="font-size:64px;font-weight:800;line-height:1.25;">문체 프리셋 라이브러리</div>
+    <div style="font-size:22px;font-weight:300;color:#B9C6EF;">완성형 문체를 고르거나, 그 위에서 내 문체로 발전시킨다</div>
+    <div style="margin-top:12px;font-size:16px;color:#8FA3C8;">발의 2026-07-10 · 오성호(피플그로쓰컨설팅)</div>
+    <div style="margin-top:26px;background:#1E7A4C;color:#fff;border-radius:999px;padding:10px 26px;font-size:16px;font-weight:700;">상태 — 1.0 완성 · 배포 중(v4.4)</div>
+  </div>
+</section>
+
+<!-- 02 한 줄 개념 -->
+<section class="slide" style="background:#F5F7FC;color:#0A1334;">
+  <div style="position:absolute;top:52px;left:96px;display:flex;align-items:center;gap:14px;">
+    <span style="background:#3551B5;color:#fff;font-size:14.5px;font-weight:800;padding:6px 16px;border-radius:999px;">개념</span>
+    <span style="font-size:15px;font-weight:700;color:#5A6885;letter-spacing:.14em;">한 줄 개념</span>
+  </div>
+  <div style="position:absolute;top:92px;left:96px;right:96px;height:1px;background:#E4E8F2;"></div>
+  <div style="position:absolute;top:108px;left:96px;right:96px;font-size:34px;font-weight:800;line-height:1.3;">상향식과 하향식, 두 길이 "내 문체"에서 만난다</div>
+  <div style="position:absolute;top:200px;left:96px;right:96px;bottom:64px;display:flex;flex-direction:column;gap:22px;">
+    <div style="flex:1;display:flex;align-items:stretch;gap:0;">
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-radius:18px;padding:28px;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+        <div style="font-size:14px;font-weight:800;color:#3551B5;letter-spacing:.08em;margin-bottom:12px;">상향식 · build-voice</div>
+        <div style="font-size:23px;font-weight:800;margin-bottom:10px;">내 글 → 내 문체</div>
+        <div style="font-size:16.5px;color:#46506B;line-height:1.6;">백지에서 시작해 내가 쓴 글로 문체를 뽑아낸다(현행 스킬)</div>
+      </div>
+      <div style="flex:0 0 90px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#8B9DEF;font-weight:800;">＋</div>
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-radius:18px;padding:28px;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+        <div style="font-size:14px;font-weight:800;color:#3551B5;letter-spacing:.08em;margin-bottom:12px;">하향식 · 문체 프리셋</div>
+        <div style="font-size:23px;font-weight:800;margin-bottom:10px;">완성형 스타일 → 선택/변형</div>
+        <div style="font-size:16.5px;color:#46506B;line-height:1.6;">대표가 큐레이션한 스타일을 고르거나 기반으로 발전시킨다(신규)</div>
+      </div>
+    </div>
+    <div style="background:#0A1334;border-radius:14px;padding:20px 26px;text-align:center;">
+      <div style="font-size:18px;font-weight:800;color:#F59E0B;">프리셋을 출발점으로 골라 두고, 내 글이 쌓이면 build-voice로 개인화 — 두 방향이 만난다</div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 프리셋 스타일 + 지적 자산 -->
+<section class="slide" style="background:#F5F7FC;color:#0A1334;">
+  <div style="position:absolute;top:52px;left:96px;display:flex;align-items:center;gap:14px;">
+    <span style="background:#3551B5;color:#fff;font-size:14.5px;font-weight:800;padding:6px 16px;border-radius:999px;">1층</span>
+    <span style="font-size:15px;font-weight:700;color:#5A6885;letter-spacing:.14em;">프리셋 스타일 = 대표의 지적 자산</span>
+  </div>
+  <div style="position:absolute;top:92px;left:96px;right:96px;height:1px;background:#E4E8F2;"></div>
+  <div style="position:absolute;top:108px;left:96px;right:96px;font-size:32px;font-weight:800;">이름 붙은 완성형 스타일 — 정본 7종 확정</div>
+  <div style="position:absolute;top:196px;left:96px;right:96px;bottom:64px;display:flex;flex-direction:column;gap:18px;">
+    <div style="flex:1.4;">
+      <table style="width:100%;height:100%;border-collapse:collapse;font-size:16.5px;table-layout:fixed;">
+        <colgroup><col style="width:22%"><col style="width:38%"><col style="width:40%"></colgroup>
+        <thead><tr style="background:#0A1334;color:#fff;">
+          <th style="text-align:left;padding:12px 18px;font-size:14px;letter-spacing:.06em;">스타일명(가안)</th>
+          <th style="text-align:left;padding:12px 18px;font-size:14px;letter-spacing:.06em;">성격</th>
+          <th style="text-align:left;padding:12px 18px;font-size:14px;letter-spacing:.06em;">어울리는 책</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:#fff;"><td style="padding:14px 18px;font-weight:700;border-bottom:1px solid #E4E8F2;">신뢰의 실용서</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">하십시오체, 짧고 단단한 문장, 근거 우선</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">비즈니스·자기계발</td></tr>
+          <tr style="background:#F0F2F9;"><td style="padding:14px 18px;font-weight:700;border-bottom:1px solid #E4E8F2;">따뜻한 멘토</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">해요체, 경험담·비유 풍부, 독자에게 말 걸기</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">에세이·인생론·회고</td></tr>
+          <tr style="background:#fff;"><td style="padding:14px 18px;font-weight:700;border-bottom:1px solid #E4E8F2;">강연자의 목소리</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">구어체 리듬, 질문 던지기, 강조 반복</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">강의 기반서·동기부여</td></tr>
+          <tr style="background:#F0F2F9;"><td style="padding:14px 18px;font-weight:700;border-bottom:1px solid #E4E8F2;">학자의 정갈함</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">정확한 개념어, 논리 전개, 절제된 톤</td><td style="padding:14px 18px;border-bottom:1px solid #E4E8F2;line-height:1.5;">교양·전문 입문서</td></tr>
+          <tr style="background:#fff;"><td style="padding:14px 18px;font-weight:700;">이야기꾼</td><td style="padding:14px 18px;line-height:1.5;">장면 묘사, 서사적 도입, 감정선</td><td style="padding:14px 18px;line-height:1.5;">스토리텔링·자전적</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:13.5px;color:#8A96BD;">위 5종은 초기 후보안 — 6·7번은 예문 품질 피드백 반영 후 정본 확정(07-12). 5종 하한·7종 상한(그 이상은 "폰트 고르기"가 "폰트 공부"가 됨).</div>
+    <div style="flex:0 0 auto;background:#0A1334;border-radius:14px;padding:18px 26px;display:flex;gap:28px;">
+      <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#F59E0B;margin-bottom:4px;">복제 불가한 저작물</div><div style="font-size:14.5px;color:#DCE4FA;line-height:1.5;">30년 HR·집필 경험으로 큐레이션</div></div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#F59E0B;margin-bottom:4px;">IP 보호 자연 성립</div><div style="font-size:14.5px;color:#DCE4FA;line-height:1.5;">설계 원본은 마스터만, 배포본엔 결과만</div></div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#F59E0B;margin-bottom:4px;">차별화 포인트</div><div style="font-size:14.5px;color:#DCE4FA;line-height:1.5;">"우리만의 문체 스타일 라이브러리"</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 2층 구조 설계 -->
+<section class="slide" style="background:#0A1334;color:#fff;">
+  <div class="grid" style="opacity:.35;"></div>
+  <div style="position:absolute;top:52px;left:96px;display:flex;align-items:center;gap:14px;">
+    <span style="background:#F59E0B;color:#0A1334;font-size:14.5px;font-weight:800;padding:6px 16px;border-radius:999px;">구조</span>
+    <span style="font-size:15px;font-weight:700;color:#8FA3C8;letter-spacing:.14em;">2층 구조 설계</span>
+  </div>
+  <div style="position:absolute;top:92px;left:96px;right:96px;height:1px;background:rgba(255,255,255,.15);"></div>
+  <div style="position:absolute;top:108px;left:96px;right:96px;font-size:32px;font-weight:800;">품질 보증(1층) 위에 자유도(2층)를 얹는다</div>
+  <div style="position:absolute;top:206px;left:96px;right:96px;bottom:64px;display:flex;flex-direction:column;gap:20px;">
+    <div style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:26px 32px;display:flex;flex-direction:column;justify-content:center;">
+      <div style="font-size:14px;font-weight:800;color:#F59E0B;letter-spacing:.06em;margin-bottom:8px;">1층 — 프리셋(큐레이션, 5~7종 고정)</div>
+      <div style="font-size:18px;line-height:1.6;color:#DCE4FA;">이름 붙은 완성형 스타일. 대표의 브랜드 자산이 위치하는 층 — 검증된 좌표(품질 보증)</div>
+    </div>
+    <div style="text-align:center;font-size:22px;color:#8B9DEF;">↓ 피팅룸 방식으로 연결</div>
+    <div style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:26px 32px;display:flex;flex-direction:column;justify-content:center;">
+      <div style="font-size:14px;font-weight:800;color:#F59E0B;letter-spacing:.06em;margin-bottom:8px;">2층 — 문체 맞춤 문답(조합 생성기, 7축)</div>
+      <div style="font-size:18px;line-height:1.6;color:#DCE4FA;">축 조합표를 노출하지 않고, <b style="color:#fff;">질문 5~7개 → 축 값 결정 → 즉석 예문 2개 → 선택</b>하는 피팅룸 방식 — 좌표계 전체(자유도)</div>
+    </div>
+    <div style="background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.4);border-radius:14px;padding:16px 24px;text-align:center;">
+      <div style="font-size:15.5px;color:#FFE7BE;">권장 UX — "프리셋에서 시작 → 마음에 안 드는 축 1~2개만 바꾸기". 완전 자유 조합은 품질 편차가 큽니다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 실행 스케치 & 구현 상태 -->
+<section class="slide" style="background:#F5F7FC;color:#0A1334;">
+  <div style="position:absolute;top:52px;left:96px;display:flex;align-items:center;gap:14px;">
+    <span style="background:#3551B5;color:#fff;font-size:14.5px;font-weight:800;padding:6px 16px;border-radius:999px;">실행</span>
+    <span style="font-size:15px;font-weight:700;color:#5A6885;letter-spacing:.14em;">실행 스케치 & 구현 상태(07-12 기준)</span>
+  </div>
+  <div style="position:absolute;top:92px;left:96px;right:96px;height:1px;background:#E4E8F2;"></div>
+  <div style="position:absolute;top:108px;left:96px;right:96px;font-size:31px;font-weight:800;">5단계 계획 중 1층·2층은 이미 끝났다</div>
+  <div style="position:absolute;top:196px;left:96px;right:96px;bottom:64px;display:flex;gap:28px;">
+    <div style="flex:1.3;display:flex;flex-direction:column;">
+      <div style="font-size:13.5px;font-weight:800;color:#3551B5;letter-spacing:.06em;margin-bottom:10px;">계획한 5단계</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div style="flex:1;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E4E8F2;border-radius:10px;padding:10px 18px;"><div style="width:26px;height:26px;border-radius:50%;background:#3551B5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto;">1</div><div style="font-size:14.5px;line-height:1.4;">프리셋 정의 파일 포맷 확정(6축+예문+설명) — 대표 집필, Claude 구조화</div></div>
+        <div style="flex:1;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E4E8F2;border-radius:10px;padding:10px 18px;"><div style="width:26px;height:26px;border-radius:50%;background:#3551B5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto;">2</div><div style="font-size:14.5px;line-height:1.4;">choose-voice 스킬 — 5종 예문 제시 → 선택 → 문체가이드.md 기준선</div></div>
+        <div style="flex:1;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E4E8F2;border-radius:10px;padding:10px 18px;"><div style="width:26px;height:26px;border-radius:50%;background:#8A96BD;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto;">3</div><div style="font-size:14.5px;line-height:1.4;">혼합 모드 — 선택 프리셋 + build-voice 분석 가중 결합</div></div>
+        <div style="flex:1;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E4E8F2;border-radius:10px;padding:10px 18px;"><div style="width:26px;height:26px;border-radius:50%;background:#8A96BD;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto;">4</div><div style="font-size:14.5px;line-height:1.4;">온보딩 모듈 C 분기 — 샘플 없음/있음/둘 다</div></div>
+        <div style="flex:1;display:flex;align-items:center;gap:14px;background:#0A1334;border-radius:10px;padding:10px 18px;"><div style="width:26px;height:26px;border-radius:50%;background:#F59E0B;color:#0A1334;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto;">5</div><div style="font-size:14.5px;line-height:1.4;color:#fff;">IP — 설계 원본 마스터만, 배포본엔 결과만</div></div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+      <div style="font-size:13.5px;font-weight:800;color:#3551B5;letter-spacing:.06em;">현재 구현 상태</div>
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-left:6px solid #1E7A4C;border-radius:14px;padding:18px 22px;display:flex;align-items:center;"><div><div style="font-size:14.5px;font-weight:800;color:#1E7A4C;margin-bottom:5px;">✅ 1층 완성 — 프리셋 7종 정본 확정</div><div style="font-size:14.5px;line-height:1.5;color:#3A4568;">07-12 대표 승인. "예문=최고 수준 시연" 원칙 명문화</div></div></div>
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-left:6px solid #1E7A4C;border-radius:14px;padding:18px 22px;display:flex;align-items:center;"><div><div style="font-size:14.5px;font-weight:800;color:#1E7A4C;margin-bottom:5px;">✅ 2층 완성 — 좌표계 + tune-voice 스킬</div><div style="font-size:14.5px;line-height:1.5;color:#3A4568;">문체 좌표계(7축)를 presets.md에 수록 — v4.4 페이로드 포함</div></div></div>
+      <div style="flex:1;background:#F0F2F9;border-radius:14px;padding:18px 22px;display:flex;align-items:center;"><div><div style="font-size:14.5px;font-weight:800;color:#5A6885;margin-bottom:5px;">⏳ 남은 백로그(3·4단계 관련)</div><div style="font-size:14.5px;line-height:1.5;color:#3A4568;">혼합 가중치 · 닮고 싶은 저자 매핑 · 문체 성장 리포트 · 장르팩</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 지금 안 하는 것 vs 지금 하는 것 -->
+<section class="slide" style="background:#F5F7FC;color:#0A1334;">
+  <div style="position:absolute;top:52px;left:96px;display:flex;align-items:center;gap:14px;">
+    <span style="background:#3551B5;color:#fff;font-size:14.5px;font-weight:800;padding:6px 16px;border-radius:999px;">판단</span>
+    <span style="font-size:15px;font-weight:700;color:#5A6885;letter-spacing:.14em;">선행조건·리스크 · 다음 행동</span>
+  </div>
+  <div style="position:absolute;top:92px;left:96px;right:96px;height:1px;background:#E4E8F2;"></div>
+  <div style="position:absolute;top:108px;left:96px;right:96px;font-size:31px;font-weight:800;">할 일은 하나, 미룰 일은 여럿이다</div>
+  <div style="position:absolute;top:196px;left:96px;right:96px;bottom:64px;display:flex;gap:28px;">
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13.5px;font-weight:800;color:#8A2A2A;letter-spacing:.06em;">지금 하지 않는 것 · 주의할 것</div>
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;"><span style="font-size:22px;">✍️</span><div style="font-size:14.5px;line-height:1.5;">프리셋 <b>내용 집필은 대표의 저작 작업</b> — Claude는 구조·스킬만</div></div>
+      <div style="flex:1;background:#fff;border:1px solid #E4E8F2;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;"><span style="font-size:22px;">⏱️</span><div style="font-size:14.5px;line-height:1.5;">확장 아이디어(혼합·A/B·저자매핑·성장리포트·장르팩)는 <b>안정화 이후</b> — 지금 벌이면 코어가 흔들림(7/9 과속 교훈)</div></div>
+      <div style="flex:1;background:#FFF7E8;border:1px solid #F5D8A0;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;"><span style="font-size:22px;">⚠️</span><div style="font-size:14.5px;line-height:1.5;color:#7A5200;">프리셋이 개성을 획일화하지 않도록 — 항상 <b>"출발점일 뿐, 당신의 문체로 발전"</b> 명시</div></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13.5px;font-weight:800;color:#1E7A4C;letter-spacing:.06em;">지금 하는 것</div>
+      <div style="flex:1;background:#0A1334;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:15px;font-weight:800;color:#F59E0B;margin-bottom:8px;">1 · 대표: 프리셋 5종 초안 검토</div>
+        <div style="font-size:14.5px;line-height:1.55;color:#DCE4FA;">경로 — <span style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:rgba(0,0,0,.25);padding:2px 7px;border-radius:6px;">choose-voice\presets.md</span><br>예문·6축 초안을 Claude가 작성해 둠 — 고칠 부분만 표시하면 반영</div>
+      </div>
+      <div style="flex:1;background:#0A1334;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:15px;font-weight:800;color:#F59E0B;margin-bottom:8px;">2 · 정본 확정 후</div>
+        <div style="font-size:14.5px;line-height:1.55;color:#DCE4FA;">2층 문체 맞춤 문답 스킬 개발(반나절 소요 예상)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 마무리 -->
+<section class="slide" style="background:#0A1334;color:#fff;">
+  <div class="grid" style="opacity:.5;"></div>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;padding:0 160px;">
+    <div style="font-size:14px;font-weight:700;letter-spacing:.3em;color:#8B9DEF;">대표 저작 × Claude 구조화</div>
+    <div style="font-size:48px;font-weight:800;line-height:1.35;">완성형 스타일이 아니라,<br>당신 문체로 가는 출발점</div>
+    <div style="font-size:18px;font-weight:300;color:#B9C6EF;line-height:1.7;">1.0은 이미 배포 중입니다 — 다음은 5종 초안 검토뿐입니다.</div>
+    <div style="margin-top:16px;font-size:16px;color:#8FA3C8;">© 2026 PeopleGrowth Consulting · 오성호</div>
+  </div>
+</section>
+<!-- ▲▲▲ 여기까지 교체 ▲▲▲ -->
+
+<div style="position:absolute;left:40px;bottom:22px;font-size:12px;font-weight:600;color:#8A96BD;letter-spacing:.02em;z-index:5;pointer-events:none;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">© 2026 PeopleGrowth Consulting · 오성호 대표 · multiosh@gmail.com</div>
+
+</div></div>
+<div class="nav">← → 이동 · P 또는 ⌘K 발표자 모드 · D 판서 · M 돋보기 · Z 확대 · <button type="button" id="navHelpBtn" title="단축키 도움말">? 단축키 도움말</button></div>
+<button id="presenterBtn" type="button" title="발표자 모드 열기 (P 또는 ⌘K)">▶ 발표자 모드</button>
+<script>
+/* ═══════════════════════════════════════════════════════
+   발표자 모드 (Presenter Mode) — DAYFOCUS LAB
+   ▸ DECK_ID: 덱마다 고유한 값으로 바꿔주세요 (같은 브라우저에서
+     여러 덱을 써도 슬라이드 위치·타이머가 서로 안 섞이게 하는 열쇠)
+   ═══════════════════════════════════════════════════════ */
+const DECK_ID='osh-voice-preset-library-v3-20260715';
+const DECK_TITLE=document.title;
+
+const inner=document.getElementById('inner');const slides=[...document.querySelectorAll('.slide')];
+const TOTAL=slides.length;
+let i=0;
+
+/* ============================================================
+   발표자 노트 데이터 (index = 슬라이드 순서, 0부터)
+   노트가 없는 슬라이드는 빈 문자열 ``로 두면 돼요.
+   ============================================================ */
+const NOTES = [
+/*01 표지*/ `이 아이디어는 이미 1.0으로 배포 중인 완성 자산이라는 점을 먼저 밝히기 — 구상 단계가 아니라 실행 완료 상태에서 설명을 시작.`,
+/*02 한줄개념*/ `build-voice(상향식)와 문체 프리셋(하향식)이 경쟁 관계가 아니라 상호보완이라는 점이 핵심 — "내 문체"에서 만난다는 그림으로 오해를 방지.`,
+/*03 프리셋+IP*/ `표의 5종은 초기 후보안이고 실제로는 7종까지 확정됐다는 점을 짚기. 하단 3포인트(저작물·IP보호·차별화)가 이 프리셋이 왜 "대표의 지적 자산"인지 설명 — 설계 원본은 마스터에만 남고 배포본엔 결과만 나간다는 구조가 핵심.`,
+/*04 2층구조*/ `⏰ 이 슬라이드가 설계의 핵심 — 1층(품질보증)과 2층(자유도)의 관계를 "프리셋에서 시작해 1~2개 축만 바꾸는" 권장 UX로 설명.`,
+/*05 실행+상태*/ `왼쪽은 원래 계획한 5단계, 오른쪽은 07-12 기준 실제 상태 — 1·2단계(1층·2층)는 이미 완성됐고 3·4단계는 백로그로 남아있다는 매핑을 짚어주기.`,
+/*06 판단*/ `⚠️ "7/9 과속 교훈"은 실제 있었던 사례 — 코어 안정화 전에 확장하려다 흔들린 경험을 짧게 언급. ⏰ 오른쪽 "지금 하는 것"은 대표의 프리셋 5종 초안 검토 단 하나뿐임을 강조 — 경로를 화면에 띄워 놓고 바로 열어볼 수 있게 준비.`,
+/*07 마무리*/ `클로징: 이미 배포 중인 자산이라는 점과, 남은 액션이 매우 가볍다는 점(초안 검토 1회)을 강조하며 마무리.`
+];
+
+/* ============================================================
+   [v5] 쉬는 시간(B) 화면 커스터마이즈
+   B를 눌렀을 때 검은 화면 대신 뜨는 안내 화면이에요.
+   웨비나 대기 화면·브레이크 타임 안내·커뮤니티 QR 등에 쓰세요.
+   전부 빈 문자열('')로 두면 기존처럼 순수 검은 화면이 돼요.
+   W(흰 화면)는 항상 순수 흰색으로 유지돼요.
+   ============================================================ */
+const BREAK_SCREEN={
+  title:'',        // 큰 제목 (예: '☕ 잠깐 쉬어가요') — 전부 비우면(기본) 순수 검은 화면
+  sub:'',          // 부제목 (예: '10분 뒤에 다시 시작할게요' · 줄바꿈은 \n)
+  logoText:'',     // 텍스트 로고 (예: 'OO컴퍼니')
+  logoImg:'',      // 이미지 로고 경로 (예: 'logo.png') — 있으면 logoText 대신 표시
+  qrImg:'',        // QR 이미지 경로 (예: 'qr.png') — 커뮤니티·웹사이트 안내용
+  qrLabel:'',      // QR 아래 설명 (예: '오픈채팅 참여하기')
+  showClock:false, // 현재 시각 표시
+  bgm:''           // 쉬는 시간 배경음악 mp3 경로 (예: 'break.mp3') — ♪ 버튼으로 재생/정지
+};
+
+const isPresenter=location.hash.indexOf('presenter')!==-1;
+
+function fit(){applyDeckTransform();} /* [v5.1] 기본 스케일 + 구역 확대 상태를 함께 반영 */
+let _dwellStart=Date.now(),_lastIdx=-1;
+function render(){
+  slides.forEach((s,j)=>s.classList.toggle('active',j===i));
+  if(i!==_lastIdx){_lastIdx=i;_dwellStart=Date.now();} /* [v3-9] 슬라이드 체류 시간 리셋 */
+  if(isPresenter)renderPresenter();
+  else{
+    document.title=(i+1)+'/'+TOTAL+' — '+DECK_TITLE; /* [v3-24] 청중 창 탭 제목에도 진행 상황 */
+    inkRedraw(); /* [v5] 슬라이드별 판서 다시 그리기 */
+    magSyncSlide(); /* [v5] 돋보기 내용 갱신 */
+  }
+}
+/* [개선 4] 랩어라운드 제거: 마지막에서 →를 눌러도 처음으로 튀지 않고 경계 토스트만 표시 */
+let lastNavLocal=0;
+function show(n){
+  const c=Math.max(0,Math.min(n,TOTAL-1));
+  if(c===i&&n!==i){edgeToast(n>i?'마지막 슬라이드예요':'첫 슬라이드예요');return;}
+  i=c;lastNavLocal=Date.now();render();persist(i);
+  if(blackoutMode)setBlackout(blackoutMode); /* [v3-6] 슬라이드를 넘기면 블랙아웃 자동 해제 */
+  if(zoomRegion)zoomSetRegion(null); /* [v5.1] 구역 확대도 자동 해제 */
+}
+function applyRemote(n){const ni=Math.max(0,Math.min(n,TOTAL-1));if(ni===i)return;i=ni;render();}
+
+/* ── 양방향 동기화: localStorage(기본) + BroadcastChannel(병행) ── */
+const LS_KEY='dfl-presenter-idx-'+DECK_ID;
+const BLACK_KEY='dfl-presenter-blackout-'+DECK_ID;
+const BC=('BroadcastChannel' in window)?new BroadcastChannel('dfl-presenter-sync-'+DECK_ID):null;
+function persist(n){
+  try{localStorage.setItem(LS_KEY,String(n));}catch(e){}
+  if(BC){try{BC.postMessage({type:'idx',idx:n});}catch(e){}}
+}
+addEventListener('storage',e=>{
+  if(e.key===LS_KEY&&e.newValue!=null)applyRemote(parseInt(e.newValue,10)||0);
+  if(e.key===BLACK_KEY)applyBlackoutFromStore();
+  if(e.key===INK_MSG_KEY&&e.newValue&&!BC){try{inkRecv(JSON.parse(e.newValue));}catch(err){}} /* [v5] BC 미지원 브라우저 폴백 */
+  if(e.key===BREAK_CFG_KEY)breakCfgChanged(); /* [v5.2] 쉬는화면 설정 동기화 */
+});
+/* [개선 9·30] 하트비트: 발표자 창이 2초마다 ping → 청중 창이 pong + 어긋난 슬라이드 자동 재정렬 */
+let lastPong=0,lastPingSeen=0;
+if(BC){BC.onmessage=e=>{
+  const d=e&&e.data;if(!d)return;
+  if(d.type==='idx')applyRemote(d.idx);
+  else if(d.type==='ink')inkRecv(d); /* [v5] 판서 동기화 */
+  else if(d.type==='zoom'){zoomRegion=d.region||null;applyDeckTransform(true);zoomChipSync();if(!isPresenter&&d.region)edgeToast('🔎 확대 중 — 다시 Z 또는 슬라이드를 넘기면 원위치');} /* [v5.1] 구역 확대 동기화 */
+  else if(d.type==='breakcfg')breakCfgChanged(); /* [v5.2] 쉬는화면 설정 동기화 */
+  else if(d.type==='blackout'){blackoutMode=(d.mode==='black'||d.mode==='white')?d.mode:null;applyBlackout();}
+  else if(d.type==='ping'&&!isPresenter){
+    lastPingSeen=Date.now();
+    try{BC.postMessage({type:'pong'});}catch(err){}
+    /* 드리프트 자동 복구: 청중 창에서 최근 2.5초 내 직접 조작이 없었을 때만 발표자 기준으로 맞춤 */
+    if(typeof d.idx==='number'&&d.idx!==i&&Date.now()-lastNavLocal>2500)applyRemote(d.idx);
+  }
+  else if(d.type==='pong'&&isPresenter)lastPong=Date.now();
+};}
+/* 발표 진행 중(발표자 창 연결됨)인 청중 창 = 강의장 투사 화면 — 도움말·점프 입력을 청중에게 노출하지 않음 */
+function isProjecting(){return !isPresenter&&Date.now()-lastPingSeen<5000;}
+
+/* [개선 5] B/W 블랙아웃 — 강의장 화면을 검게/희게 가리기 (쉬는시간·집중 유도) */
+let blackoutMode=null;
+function setBlackout(mode){
+  blackoutMode=(blackoutMode===mode)?null:mode;
+  try{localStorage.setItem(BLACK_KEY,blackoutMode||'');}catch(e){}
+  if(BC){try{BC.postMessage({type:'blackout',mode:blackoutMode});}catch(e){}}
+  applyBlackout();
+}
+function applyBlackoutFromStore(){
+  try{const v=localStorage.getItem(BLACK_KEY);blackoutMode=(v==='black'||v==='white')?v:null;}catch(e){}
+  applyBlackout();
+}
+function applyBlackout(){
+  if(!isPresenter){
+    let el=document.getElementById('blackoutOverlay');
+    if(!el){
+      el=document.createElement('div');el.id='blackoutOverlay';
+      el.title='클릭하면 화면이 다시 보여요';
+      el.addEventListener('click',()=>setBlackout(blackoutMode));
+      document.body.appendChild(el);
+    }
+    el.style.background=blackoutMode==='white'?'#fff':'#000';
+    renderBreakScreen(el); /* [v5] 커스텀 쉬는 시간 화면 */
+    el.classList.toggle('on',!!blackoutMode); /* [v3-7] 페이드 전환 */
+    bgmSync(); /* [v5] 쉬는 시간 BGM */
+  }
+  const chip=document.getElementById('pBlackChip');
+  if(chip){
+    chip.style.display=blackoutMode?'inline-block':'none';
+    chip.textContent=blackoutMode==='white'?'⬜ 강의장 화면 가림 (흰색) · W 해제':'⬛ 강의장 화면 가림 · B 해제';
+  }
+  const bb=document.getElementById('pBlackBtn');
+  if(bb)bb.textContent=blackoutMode?'⬛ 가림 해제':'⬛ 가리기'; /* [v3-4] 클릭 버튼 상태 */
+  if(isPresenter)document.body.classList.toggle('pBlackOn',!!blackoutMode); /* [v3-28] 현재 슬라이드 주황 테두리 */
+}
+
+/* ═══ [v5] 쉬는 시간(B) 커스텀 화면 + BGM — 커뮤니티 피드백 반영 ═══
+   [v5.2] 코드의 BREAK_SCREEN(기본값) 위에, 발표자 창 [☕ 쉬는화면] 버튼으로 저장한
+   설정(localStorage, 덱별)이 덮어써져요 — 코드 수정 없이 누구나 꾸밀 수 있어요. */
+const BREAK_CFG_KEY='dfl-presenter-breakcfg-'+DECK_ID;
+let _breakOverride=null,_breakLoaded=false;
+function breakCfg(){
+  if(!_breakLoaded){
+    _breakLoaded=true;
+    try{_breakOverride=JSON.parse(localStorage.getItem(BREAK_CFG_KEY)||'null');}catch(e){_breakOverride=null;}
+  }
+  return _breakOverride?Object.assign({},BREAK_SCREEN,_breakOverride):BREAK_SCREEN;
+}
+function breakCfgChanged(){ /* 설정이 바뀌면 화면·오디오 캐시 무효화 후 즉시 반영 */
+  _breakLoaded=false;
+  if(bgmAudio){try{bgmAudio.pause();}catch(e){}bgmAudio=null;}
+  const el=document.getElementById('blackoutOverlay');
+  if(el){
+    const w=el.querySelector('.boWrap');if(w)w.remove();
+    if(blackoutMode)applyBlackout();else el.classList.remove('boCustom');
+  }
+}
+function breakConfigured(){const B=breakCfg();return !!(B.title||B.sub||B.logoText||B.logoImg||B.qrImg);}
+function renderBreakScreen(el){
+  const custom=blackoutMode==='black'&&breakConfigured();
+  el.classList.toggle('boCustom',custom);
+  if(!custom||el.querySelector('.boWrap'))return;
+  const B=breakCfg();
+  const w=document.createElement('div');w.className='boWrap';
+  let h='';
+  if(B.logoImg)h+='<img class="boLogoImg" src="'+B.logoImg+'" alt="로고">';
+  else if(B.logoText)h+='<div class="boLogoText">'+escHTML(B.logoText)+'</div>';
+  if(B.title)h+='<div class="boTitle">'+escHTML(B.title)+'</div>';
+  if(B.sub)h+='<div class="boSub">'+escHTML(B.sub).replace(/\n/g,'<br>')+'</div>';
+  if(B.showClock)h+='<div class="boClock" id="boClock"></div>';
+  if(B.qrImg)h+='<div class="boQrBox"><img class="boQr" src="'+B.qrImg+'" alt="QR 코드">'+(B.qrLabel?'<div class="boQrLabel">'+escHTML(B.qrLabel)+'</div>':'')+'</div>';
+  if(B.bgm)h+='<button type="button" id="boBgmBtn">♪ BGM 재생</button>';
+  w.innerHTML=h;
+  el.appendChild(w);
+  const bb=w.querySelector('#boBgmBtn');
+  if(bb)bb.addEventListener('click',ev=>{ev.stopPropagation();bgmWant=!(bgmAudio&&!bgmAudio.paused);bgmSync();});
+  if(B.showClock){
+    const upd=()=>{const c=document.getElementById('boClock');if(!c)return;const d=new Date();c.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+    upd();setInterval(upd,5000);
+  }
+}
+/* BGM: 쉬는 시간(B) 동안 청중 창에서 재생. 브라우저가 자동재생을 막으면 ♪ 버튼으로 수동 시작 */
+let bgmAudio=null,bgmWant=true;
+function bgmSync(){
+  const B=breakCfg();
+  if(isPresenter||!B.bgm)return;
+  const on=blackoutMode==='black'&&bgmWant;
+  if(on){
+    if(!bgmAudio){bgmAudio=new Audio(B.bgm);bgmAudio.loop=true;bgmAudio.volume=0.35;}
+    bgmAudio.play().then(bgmBtnSync).catch(()=>{edgeToast('브라우저가 자동재생을 막았어요 — 화면의 ♪ 버튼을 눌러주세요');bgmBtnSync();});
+  }else if(bgmAudio&&!bgmAudio.paused)bgmAudio.pause();
+  bgmBtnSync();
+}
+function bgmBtnSync(){
+  const b=document.getElementById('boBgmBtn');if(!b)return;
+  b.textContent=(bgmAudio&&!bgmAudio.paused)?'⏸ BGM 정지':'♪ BGM 재생';
+}
+/* ═══ [v5.2] ☕ 쉬는화면 설정 모달 (발표자 창) ═══ */
+/* [v5.2] 상황별 프리셋 — 클릭 한 번으로 바로 적용, 문구는 폼에서 자유 수정
+   title은 청중에게 보이는 안내문(시그니지)이라 의도적으로 격식체(-입니다) 사용 */
+const BREAK_PRESETS=[
+  {name:'⬛ 검은 화면 (기본)',cfg:{title:'',sub:'',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:false,bgm:''}},
+  {name:'☕ 쉬는 시간',cfg:{title:'☕ 쉬는 시간입니다',sub:'잠시 후 다시 시작할게요',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:true,bgm:''}},
+  {name:'🍽 점심시간',cfg:{title:'🍽 점심시간입니다',sub:'맛있게 드시고 오세요',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:true,bgm:''}},
+  {name:'💻 실습 시간',cfg:{title:'💻 실습 시간입니다',sub:'막히면 편하게 손 들어주세요',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:true,bgm:''}},
+  {name:'🙋 Q&A',cfg:{title:'🙋 Q&A 시간입니다',sub:'궁금한 것 편하게 물어봐주세요',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:false,bgm:''}},
+  {name:'🕘 곧 시작',cfg:{title:'🕘 곧 시작합니다',sub:'잠시만 기다려주세요',logoText:'',logoImg:'',qrImg:'',qrLabel:'',showClock:true,bgm:''}}
+];
+function bcMarkActivePreset(){ /* [UX] 현재 적용 중인 프리셋 하이라이트 */
+  const el=document.getElementById('breakCfgOverlay');if(!el)return;
+  const B=breakCfg();
+  const sig=c=>JSON.stringify([c.title||'',c.sub||'',c.logoText||'',c.logoImg||'',c.qrImg||'',c.qrLabel||'',!!c.showClock,c.bgm||'']);
+  const cur=sig(B);
+  el.querySelectorAll('.bcPreset').forEach((btn,k)=>btn.classList.toggle('on',sig(BREAK_PRESETS[k].cfg)===cur));
+}
+function bcApply(o,msg){
+  try{localStorage.setItem(BREAK_CFG_KEY,JSON.stringify(o));}catch(e){edgeToast('저장 공간이 부족해요 — 이미지 크기를 줄여주세요');return false;}
+  if(BC){try{BC.postMessage({type:'breakcfg'});}catch(e){}}
+  breakCfgChanged();
+  edgeToast(msg||'저장했어요 — B를 눌러 확인해보세요');
+  return true;
+}
+let _bcLogoData,_bcQrData;
+function bcFileRow(id,label){
+  return '<div class="bcRow"><label>'+label+'</label><div class="bcInline">'+
+    '<input type="file" id="'+id+'" accept="image/*" style="font-size:12.5px;max-width:230px;">'+
+    '<img class="bcThumb" id="'+id+'Thumb" alt="미리보기">'+
+    '<button type="button" class="bcBtn ghost" id="'+id+'Clear" style="padding:6px 10px;font-size:12.5px;">지우기</button>'+
+    '</div></div>';
+}
+function bcBindFile(id,setData,curVal){
+  const inp=document.getElementById(id),thumb=document.getElementById(id+'Thumb');
+  if(curVal){thumb.src=curVal;thumb.style.display='inline-block';}
+  inp.addEventListener('change',()=>{
+    const f=inp.files&&inp.files[0];if(!f)return;
+    if(f.size>1500000){edgeToast('이미지가 너무 커요 — 1.5MB 이하로 줄여주세요');inp.value='';return;}
+    const rd=new FileReader();
+    rd.onload=()=>{setData(rd.result);thumb.src=rd.result;thumb.style.display='inline-block';};
+    rd.readAsDataURL(f);
+  });
+  document.getElementById(id+'Clear').addEventListener('click',()=>{setData('');inp.value='';thumb.style.display='none';});
+}
+function toggleBreakCfg(force){
+  let el=document.getElementById('breakCfgOverlay');
+  if(!el){
+    el=document.createElement('div');el.id='breakCfgOverlay';
+    const B=breakCfg();
+    _bcLogoData=undefined;_bcQrData=undefined;
+    el.innerHTML='<div class="bcCard">'+
+      '<div class="bcTitle">☕ 쉬는 시간(B) 화면 꾸미기</div>'+
+      '<div class="bcHint">B를 눌렀을 때 강의장 화면에 뜨는 내용이에요. 프리셋을 고르면 바로 적용되고, 아래 폼에서 자유롭게 고칠 수 있어요.<br>설정은 이 브라우저에 덱별로 저장돼요 (코드 수정 없음).</div>'+
+      '<div class="bcPresets">'+BREAK_PRESETS.map((pz,k)=>'<button type="button" class="bcPreset" data-preset="'+k+'">'+pz.name+'</button>').join('')+'</div>'+
+      '<div class="bcRow"><label>큰 제목</label><input type="text" id="bcTitle" placeholder="예: ☕ 잠깐 쉬어가요"></div>'+
+      '<div class="bcRow"><label>부제목</label><input type="text" id="bcSub" placeholder="예: 10분 뒤에 다시 시작할게요"></div>'+
+      '<div class="bcRow"><label>로고 텍스트</label><input type="text" id="bcLogoText" placeholder="예: OO컴퍼니"></div>'+
+      bcFileRow('bcLogoImg','로고 이미지 (있으면 텍스트 대신 표시)')+
+      bcFileRow('bcQrImg','QR 이미지 (커뮤니티·웹사이트 안내)')+
+      '<div class="bcRow"><label>QR 아래 설명</label><input type="text" id="bcQrLabel" placeholder="예: 오픈채팅 참여하기"></div>'+
+      '<div class="bcRow"><label class="bcCheck"><input type="checkbox" id="bcClock"> 현재 시각 표시</label></div>'+
+      '<div class="bcRow"><label>BGM 파일 경로 (선택)</label><input type="text" id="bcBgm" placeholder="예: break.mp3 — deck 파일과 같은 폴더에 두세요"></div>'+
+      '<div class="bcActions">'+
+        '<button type="button" class="bcBtn" id="bcSave">저장</button>'+
+        '<button type="button" class="bcBtn ghost" id="bcReset">기본(검은 화면)으로 초기화</button>'+
+        '<button type="button" class="bcBtn ghost" id="bcClose">닫기</button>'+
+      '</div></div>';
+    document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('on');});
+    document.getElementById('bcTitle').value=B.title||'';
+    document.getElementById('bcSub').value=B.sub||'';
+    document.getElementById('bcLogoText').value=B.logoText||'';
+    document.getElementById('bcQrLabel').value=B.qrLabel||'';
+    document.getElementById('bcClock').checked=!!B.showClock;
+    document.getElementById('bcBgm').value=B.bgm||'';
+    bcBindFile('bcLogoImg',v=>{_bcLogoData=v;},B.logoImg);
+    bcBindFile('bcQrImg',v=>{_bcQrData=v;},B.qrImg);
+    el.querySelectorAll('.bcPreset').forEach(btn=>btn.addEventListener('click',()=>{
+      const cfg=BREAK_PRESETS[parseInt(btn.dataset.preset,10)].cfg;
+      document.getElementById('bcTitle').value=cfg.title;
+      document.getElementById('bcSub').value=cfg.sub;
+      document.getElementById('bcLogoText').value=cfg.logoText;
+      document.getElementById('bcQrLabel').value=cfg.qrLabel;
+      document.getElementById('bcClock').checked=cfg.showClock;
+      document.getElementById('bcBgm').value=cfg.bgm;
+      _bcLogoData='';_bcQrData='';
+      document.getElementById('bcLogoImgThumb').style.display='none';
+      document.getElementById('bcQrImgThumb').style.display='none';
+      const k=parseInt(btn.dataset.preset,10);
+      bcApply(Object.assign({},cfg),k===0?'기본(검은 화면)으로 설정했어요':btn.textContent+' 적용됐어요 — B를 눌러 확인해보세요');
+      bcMarkActivePreset();
+    }));
+    document.getElementById('bcClose').addEventListener('click',()=>el.classList.remove('on'));
+    document.getElementById('bcSave').addEventListener('click',()=>{
+      const B0=breakCfg();
+      const o={
+        title:document.getElementById('bcTitle').value.trim(),
+        sub:document.getElementById('bcSub').value.trim(),
+        logoText:document.getElementById('bcLogoText').value.trim(),
+        logoImg:(_bcLogoData!==undefined)?_bcLogoData:(B0.logoImg||''),
+        qrImg:(_bcQrData!==undefined)?_bcQrData:(B0.qrImg||''),
+        qrLabel:document.getElementById('bcQrLabel').value.trim(),
+        showClock:document.getElementById('bcClock').checked,
+        bgm:document.getElementById('bcBgm').value.trim()
+      };
+      try{localStorage.setItem(BREAK_CFG_KEY,JSON.stringify(o));}catch(e){edgeToast('저장 공간이 부족해요 — 이미지 크기를 줄여주세요');return;}
+      if(BC){try{BC.postMessage({type:'breakcfg'});}catch(e){}}
+      breakCfgChanged();
+      el.classList.remove('on');
+      edgeToast('저장했어요 — B를 눌러 확인해보세요');
+    });
+    document.getElementById('bcReset').addEventListener('click',()=>{
+      try{localStorage.removeItem(BREAK_CFG_KEY);}catch(e){}
+      _bcLogoData=undefined;_bcQrData=undefined;
+      if(BC){try{BC.postMessage({type:'breakcfg'});}catch(e){}}
+      breakCfgChanged();
+      el.remove(); /* 폼을 기본값으로 다시 그리기 위해 제거 */
+      edgeToast('기본(검은 화면)으로 되돌렸어요');
+    });
+  }
+  const on=(force!==undefined)?force:!el.classList.contains('on');
+  el.classList.toggle('on',on);
+  if(on)bcMarkActivePreset();
+}
+
+/* ═══ [v5] 판서: 펜(D)·형광펜(G)·지우개(E) — 커뮤니티 피드백 반영 ═══
+   발표자 창·청중 창 어느 쪽에서 그려도 실시간 동기화.
+   좌표는 슬라이드 기준(1600×900)으로 정규화 — 창 크기가 달라도 같은 위치에 그려져요.
+   판서는 이 세션에서만 유지돼요(새로고침 시 초기화). */
+const INK={};
+const INK_COLORS=['#FF3B30','#FF9500','#FFD60A','#17B26A','#2E7CF6','#111111'];
+const INK_MSG_KEY='dfl-presenter-inkmsg-'+DECK_ID;
+let inkTool=null,inkPenColor='#FF3B30',inkHlColor='#FFD60A';
+let inkCur=null,inkLive=null,inkDragging=false,inkSeq=0,_inkLiveT=0;
+let pInkCanvas=null; /* 발표자 창 캔버스 — renderPresenter가 현재 슬라이드 박스에 다시 붙임 */
+function inkCanvasEl(){return isPresenter?pInkCanvas:document.getElementById('inkCanvas');}
+function inkStrokesOf(n){return INK[n]||(INK[n]=[]);}
+function inkColorNow(){return inkTool==='hl'?inkHlColor:inkPenColor;}
+function inkRedraw(){
+  const cv=inkCanvasEl();if(!cv)return;
+  let sx=2,sy=2;
+  if(isPresenter){
+    const w=cv.clientWidth,h=cv.clientHeight;
+    if(w<2||h<2)return;
+    if(cv.width!==w*2||cv.height!==h*2){cv.width=w*2;cv.height=h*2;}
+    sx=cv.width/1600;sy=cv.height/900;
+  }
+  const ctx=cv.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.setTransform(sx,0,0,sy,0,0);
+  const list=(INK[i]||[]).slice();
+  if(inkLive&&inkLive.slide===i)list.push(inkLive.stroke);
+  list.forEach(st=>inkPaint(ctx,st));
+  if(zoomSelMode&&zoomDrag){ /* [v5.1] 확대 구역 선택 사각형 */
+    const zx=Math.min(zoomDrag.a[0],zoomDrag.b[0]),zy=Math.min(zoomDrag.a[1],zoomDrag.b[1]);
+    const zw=Math.abs(zoomDrag.a[0]-zoomDrag.b[0]),zh=Math.abs(zoomDrag.a[1]-zoomDrag.b[1]);
+    ctx.save();ctx.setLineDash([12,8]);ctx.lineWidth=3;ctx.strokeStyle='#6366F1';ctx.fillStyle='rgba(99,102,241,.12)';
+    ctx.fillRect(zx,zy,zw,zh);ctx.strokeRect(zx,zy,zw,zh);ctx.restore();
+  }
+}
+function inkPaint(ctx,st){
+  const p=st.pts;if(!p||!p.length)return;
+  ctx.globalAlpha=st.t==='hl'?0.38:1;
+  ctx.strokeStyle=st.c;ctx.fillStyle=st.c;
+  ctx.lineWidth=st.w;ctx.lineCap='round';ctx.lineJoin='round';
+  if(p.length===1){ctx.beginPath();ctx.arc(p[0][0],p[0][1],st.w/2,0,Math.PI*2);ctx.fill();}
+  else{ctx.beginPath();ctx.moveTo(p[0][0],p[0][1]);for(let k=1;k<p.length;k++)ctx.lineTo(p[k][0],p[k][1]);ctx.stroke();}
+  ctx.globalAlpha=1;
+}
+function inkSend(m){
+  m=Object.assign({type:'ink'},m);
+  if(BC){try{BC.postMessage(m);}catch(e){}}
+  else{try{localStorage.setItem(INK_MSG_KEY,JSON.stringify(Object.assign({_n:Date.now()+Math.random()},m)));}catch(e){}}
+}
+function inkRecv(m){
+  if(m.op==='add'){const a=inkStrokesOf(m.slide);if(!a.some(s=>s.id===m.stroke.id))a.push(m.stroke);if(inkLive&&inkLive.stroke.id===m.stroke.id)inkLive=null;if(m.slide===i)inkRedraw();}
+  else if(m.op==='live'){inkLive={slide:m.slide,stroke:m.stroke};if(m.slide===i)inkRedraw();}
+  else if(m.op==='del'){if(INK[m.slide])INK[m.slide]=INK[m.slide].filter(s=>m.ids.indexOf(s.id)<0);if(m.slide===i)inkRedraw();}
+  else if(m.op==='clear'){INK[m.slide]=[];if(inkLive&&inkLive.slide===m.slide)inkLive=null;if(m.slide===i)inkRedraw();}
+  else if(m.op==='req'){inkSend({op:'full',data:INK});}
+  else if(m.op==='full'){Object.keys(m.data||{}).forEach(k=>{if(!INK[k]||!INK[k].length)INK[k]=m.data[k];});inkRedraw();}
+}
+function inkPointOf(cv,e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)/r.width*1600,(e.clientY-r.top)/r.height*900];}
+function inkEraseAt(p){
+  const a=INK[i];if(!a||!a.length)return;
+  const del=[];
+  INK[i]=a.filter(st=>{
+    const th=st.t==='hl'?28:16;
+    const hit=st.pts.some(q=>{const dx=q[0]-p[0],dy=q[1]-p[1];return dx*dx+dy*dy<th*th;});
+    if(hit)del.push(st.id);
+    return !hit;
+  });
+  if(del.length){inkSend({op:'del',slide:i,ids:del});inkRedraw();}
+}
+function inkAttach(cv){
+  cv.addEventListener('pointerdown',e=>{
+    if(zoomSelMode&&e.button===0){e.preventDefault();e.stopPropagation();try{cv.setPointerCapture(e.pointerId);}catch(err){}zoomDrag={a:inkPointOf(cv,e),b:inkPointOf(cv,e)};inkRedraw();return;} /* [v5.1] */
+    if(!inkTool||e.button!==0)return;
+    e.preventDefault();e.stopPropagation();
+    try{cv.setPointerCapture(e.pointerId);}catch(err){}
+    inkDragging=true;
+    const p=inkPointOf(cv,e);
+    if(inkTool==='erase'){inkEraseAt(p);return;}
+    inkCur={id:'k'+Date.now().toString(36)+'-'+(inkSeq++),t:inkTool,c:inkColorNow(),w:inkTool==='hl'?26:4.5,pts:[p]};
+    inkStrokesOf(i).push(inkCur);
+    inkRedraw();
+  });
+  cv.addEventListener('pointermove',e=>{
+    if(zoomSelMode){if(zoomDrag){e.preventDefault();zoomDrag.b=inkPointOf(cv,e);inkRedraw();}return;} /* [v5.1] */
+    if(!inkDragging||!inkTool)return;
+    e.preventDefault();
+    const p=inkPointOf(cv,e);
+    if(inkTool==='erase'){inkEraseAt(p);return;}
+    if(!inkCur)return;
+    const last=inkCur.pts[inkCur.pts.length-1];
+    if(Math.abs(p[0]-last[0])+Math.abs(p[1]-last[1])<1.2)return;
+    inkCur.pts.push(p);
+    inkRedraw();
+    if(Date.now()-_inkLiveT>60){_inkLiveT=Date.now();inkSend({op:'live',slide:i,stroke:inkCur});}
+  });
+  function up(){
+    if(zoomSelMode){if(zoomDrag)zoomCommit();return;} /* [v5.1] */
+    if(!inkDragging)return;
+    inkDragging=false;
+    if(inkCur){inkSend({op:'add',slide:i,stroke:inkCur});inkCur=null;}
+  }
+  cv.addEventListener('pointerup',up);
+  cv.addEventListener('pointercancel',up);
+  cv.addEventListener('click',e=>{if(inkTool||zoomSelMode)e.stopPropagation();}); /* 발표자 창 클릭 네비게이션과 충돌 방지 */
+}
+function buildInkBar(){
+  if(document.getElementById('inkBar'))return;
+  const bar=document.createElement('div');bar.id='inkBar';
+  const tools=[['pen','✏️ 펜','D'],['hl','🖍️ 형광펜','G'],['erase','⌫ 지우개','E']];
+  bar.innerHTML=tools.map(t=>'<button type="button" class="inkBtn" data-tool="'+t[0]+'" title="단축키 '+t[2]+'">'+t[1]+'<span class="inkKbd">'+t[2]+'</span></button>').join('')+
+    '<span class="inkSep"></span>'+
+    INK_COLORS.map(c=>'<button type="button" class="inkSwatch" data-c="'+c+'" style="background:'+c+'" aria-label="펜 색상 '+c+'" title="펜 색상"></button>').join('')+
+    '<span class="inkSep"></span>'+
+    '<button type="button" class="inkBtn" id="inkClearBtn" title="이 슬라이드의 판서 모두 지우기">🗑 모두 지우기</button>'+
+    '<button type="button" class="inkBtn" id="inkCloseBtn" title="판서 종료 (Esc)">✕ 종료</button>';
+  document.body.appendChild(bar);
+  bar.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>inkSetTool(b.dataset.tool)));
+  bar.querySelectorAll('.inkSwatch').forEach(b=>b.addEventListener('click',()=>{
+    if(inkTool==='hl')inkHlColor=b.dataset.c;else inkPenColor=b.dataset.c;
+    inkBarSync();
+  }));
+  document.getElementById('inkClearBtn').addEventListener('click',()=>{INK[i]=[];inkLive=null;inkSend({op:'clear',slide:i});inkRedraw();});
+  document.getElementById('inkCloseBtn').addEventListener('click',()=>inkSetTool(null));
+}
+function inkBarSync(){
+  const bar=document.getElementById('inkBar');if(!bar)return;
+  bar.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===inkTool));
+  const cur=inkColorNow();
+  bar.querySelectorAll('.inkSwatch').forEach(b=>b.classList.toggle('on',b.dataset.c===cur));
+}
+function inkSetTool(t){
+  inkTool=(t&&inkTool!==t)?t:null;
+  if(inkTool)buildInkBar();
+  document.body.classList.toggle('inkOn',!!inkTool);
+  document.body.classList.toggle('inkErase',inkTool==='erase'); /* [UX] 지우개 커서 */
+  const ib=document.getElementById('pInkBtn'); /* [UX] 버튼 활성 상태 */
+  if(ib){ib.classList.toggle('on',!!inkTool);ib.textContent=inkTool?'✏️ 판서 중':'✏️ 판서';}
+  inkBarSync();
+}
+
+/* ═══ [v5.1] Z — 구역 확대: 드래그한 영역을 화면에 꽉 채워 확대 ═══
+   강의장 화면에서 Z → 드래그로 영역 선택. 발표자 창에서도 현재 슬라이드 박스 위에서 선택하면
+   강의장 화면이 확대돼요. 다시 Z·Esc·슬라이드 넘기면 원위치. 확대 중 판서·돋보기 조합 가능. */
+let zoomRegion=null,zoomSelMode=false,zoomDrag=null;
+function applyDeckTransform(anim){
+  if(isPresenter||!inner)return;
+  if(anim){inner.classList.add('zoomAnim');clearTimeout(window._zoomAnimT);window._zoomAnimT=setTimeout(()=>inner.classList.remove('zoomAnim'),480);}
+  const s=Math.min(innerWidth/1600,innerHeight/900);
+  if(zoomRegion)inner.style.transform='scale('+(s*zoomRegion.zf)+') translate('+(800-zoomRegion.cx)+'px,'+(450-zoomRegion.cy)+'px)';
+  else inner.style.transform='scale('+s+')';
+}
+function zoomChipSync(){const chip=document.getElementById('pZoomChip');if(chip)chip.style.display=zoomRegion?'inline-block':'none';}
+function zoomSetRegion(rg,noSend){
+  zoomRegion=rg;
+  applyDeckTransform(true);
+  zoomChipSync();
+  if(!isPresenter&&rg)edgeToast('🔎 확대 중 — 다시 Z 또는 슬라이드를 넘기면 원위치'); /* [UX] */
+  if(!noSend&&BC){try{BC.postMessage({type:'zoom',region:rg});}catch(e){}}
+}
+function zoomSelModeSet(on){
+  zoomSelMode=on;zoomDrag=null;
+  document.body.classList.toggle('zoomSelMode',on);
+  if(on&&inkTool)inkSetTool(null);
+  if(on)edgeToast('🔎 확대할 구역을 드래그로 선택하세요 · 클릭 = 2배 · Z 취소');
+  inkRedraw();
+}
+function zoomToggle(){
+  if(zoomRegion||zoomSelMode){zoomSelModeSet(false);if(zoomRegion)zoomSetRegion(null);}
+  else zoomSelModeSet(true);
+}
+function zoomCommit(){
+  const a=zoomDrag.a,b=zoomDrag.b;zoomDrag=null;
+  const x=Math.min(a[0],b[0]),y=Math.min(a[1],b[1]),w=Math.abs(a[0]-b[0]),h=Math.abs(a[1]-b[1]);
+  let cx,cy,zf;
+  if(w<30&&h<30){zf=2;cx=(a[0]+b[0])/2;cy=(a[1]+b[1])/2;} /* 클릭 = 그 지점 2배 */
+  else{zf=Math.max(1.15,Math.min(5,Math.min(1600/Math.max(w,40),900/Math.max(h,24))));cx=x+w/2;cy=y+h/2;}
+  cx=Math.max(800/zf,Math.min(1600-800/zf,cx)); /* 슬라이드 밖이 보이지 않게 중심 보정 */
+  cy=Math.max(450/zf,Math.min(900-450/zf,cy));
+  zoomSelModeSet(false);
+  zoomSetRegion({cx:Math.round(cx),cy:Math.round(cy),zf:Math.round(zf*100)/100});
+}
+
+/* ═══ [v5] M — 마우스 돋보기 (청중 창, 휠로 배율 조절) — 커뮤니티 피드백 반영 ═══ */
+let magOn=false,magZoom=2,magEl=null,magInnerEl=null,magChip=null,_magLast=null;
+function magBuild(){
+  magEl=document.createElement('div');magEl.id='magLens';
+  magInnerEl=document.createElement('div');magInnerEl.className='magInner';
+  magEl.appendChild(magInnerEl);
+  document.body.appendChild(magEl);
+  magChip=document.createElement('div');magChip.id='magChip';
+  document.body.appendChild(magChip);
+  addEventListener('mousemove',e=>{_magLast=[e.clientX,e.clientY];if(magOn)magPlace(e.clientX,e.clientY);},{passive:true});
+  addEventListener('wheel',e=>{
+    if(!magOn)return;
+    e.preventDefault();
+    magZoom=Math.max(1.5,Math.min(4,magZoom+(e.deltaY<0?0.25:-0.25)));
+    magChipShow();
+    if(_magLast)magPlace(_magLast[0],_magLast[1]);
+  },{passive:false});
+}
+function magSyncSlide(){
+  if(!magInnerEl||!magOn)return;
+  magInnerEl.innerHTML='';
+  const cl=slides[i].cloneNode(true);
+  /* 클론이 .slide.active로 남으면 덱의 등장 애니메이션이 '전체 활성(PDF) 모드'로 오인함 — 전용 클래스로 교체 */
+  cl.classList.remove('slide');cl.classList.remove('active');cl.classList.add('magSlideClone');
+  magInnerEl.appendChild(cl);
+  if(_magLast)magPlace(_magLast[0],_magLast[1]);
+}
+function magPlace(mx,my){
+  if(!magEl)return;
+  const r=inner.getBoundingClientRect();
+  const R=170;
+  magEl.style.left=(mx-R)+'px';magEl.style.top=(my-R)+'px';
+  magChip.style.left=(mx+R*0.55)+'px';magChip.style.top=(my+R*0.72)+'px';
+  const s=r.width/1600;if(!s)return;
+  const cx=Math.max(0,Math.min(1600,(mx-r.left)/s));
+  const cy=Math.max(0,Math.min(900,(my-r.top)/s));
+  const z=s*magZoom;
+  magInnerEl.style.transform='translate('+(R-cx*z)+'px,'+(R-cy*z)+'px) scale('+z+')';
+}
+function magChipShow(){
+  if(!magChip)return;
+  magChip.textContent='×'+String(magZoom).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
+  magChip.style.display='block';
+  clearTimeout(window._magChipT);
+  window._magChipT=setTimeout(()=>{magChip.style.display='none';},1200);
+}
+function magToggle(){
+  if(isPresenter){edgeToast('🔍 돋보기는 강의장 화면을 클릭한 뒤 M — 발표자 창에서는 Z(구역 확대)를 쓰세요');return;}
+  magOn=!magOn;
+  if(magOn){
+    if(!magEl)magBuild();
+    magSyncSlide();
+    magEl.style.display='block';
+    if(_magLast)magPlace(_magLast[0],_magLast[1]);
+    magChipShow();
+    edgeToast('🔍 돋보기 켜짐 — 휠로 배율 조절 · M 으로 끄기');
+  }else{
+    if(magEl)magEl.style.display='none';
+    if(magChip)magChip.style.display='none';
+    if(magInnerEl)magInnerEl.innerHTML=''; /* 클론 잔존 방지 */
+  }
+}
+
+/* [개선 11] Wake Lock — 발표 중 화면 꺼짐·화면보호기 방지 */
+function requestWakeLock(){
+  if(!('wakeLock' in navigator))return;
+  try{navigator.wakeLock.request('screen').catch(()=>{});}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestWakeLock();});
+requestWakeLock();
+
+/* [개선 6] F 키 전체화면 토글 — ⌃⌘F를 몰라도 됨 */
+function toggleFullscreen(){
+  if(document.fullscreenElement){if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});}
+  else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});
+}
+
+/* [개선 4] 경계 토스트 */
+function edgeToast(msg){
+  let el=document.getElementById('edgeToast');
+  if(!el){el=document.createElement('div');el.id='edgeToast';el.className='pMiniToast';document.body.appendChild(el);}
+  el.textContent=msg;el.classList.add('on');
+  clearTimeout(window._edgeT);window._edgeT=setTimeout(()=>el.classList.remove('on'),1400);
+}
+/* [개선 3] 숫자 + Enter 슬라이드 점프 */
+let jumpBuf='';
+function updateJumpToast(){
+  let el=document.getElementById('jumpToast');
+  if(!el){el=document.createElement('div');el.id='jumpToast';el.className='pMiniToast';document.body.appendChild(el);}
+  if(jumpBuf){
+    const n=parseInt(jumpBuf,10);
+    const bad=!(n>=1&&n<=TOTAL);
+    el.textContent=bad?('슬라이드 '+jumpBuf+' — 없는 번호예요 (1~'+TOTAL+')'):('슬라이드 '+jumpBuf+' — Enter로 이동 · Esc 취소');
+    el.classList.toggle('bad',bad); /* [v3-21] 범위 밖 즉시 표시 */
+    el.classList.add('on');
+  }
+  else{el.classList.remove('on');el.classList.remove('bad');}
+}
+function jumpDigit(d){
+  if(isProjecting())return; /* [CCO] 발표 중 강의장 화면엔 점프 입력창 노출 금지 — 점프는 발표자 창에서 */
+  jumpBuf=(jumpBuf+d).slice(0,3);
+  clearTimeout(window._jumpT);window._jumpT=setTimeout(()=>{jumpBuf='';updateJumpToast();},4000);
+  updateJumpToast();
+}
+function jumpCommit(){
+  const n=parseInt(jumpBuf,10);jumpBuf='';updateJumpToast();clearTimeout(window._jumpT);
+  if(n>=1&&n<=TOTAL)show(n-1);
+  else if(n)edgeToast('1~'+TOTAL+' 사이 번호를 입력해주세요');
+}
+
+/* [개선 7] ? 또는 H — 단축키 도움말 오버레이 */
+function toggleHelp(force){
+  if(force!==false&&isProjecting())return; /* [CCO] 발표 중 강의장 화면엔 도움말 노출 금지 — 도움말은 발표자 창에서 */
+  let el=document.getElementById('helpOverlay');
+  if(!el){
+    el=document.createElement('div');el.id='helpOverlay';
+    const sec=t=>'<tr><td colspan="2" class="pHelpSec">'+t+'</td></tr>';
+    const row=(k,v)=>'<tr><td class="pKey">'+k+'</td><td>'+v+'</td></tr>';
+    el.innerHTML='<div class="pHelpCard"><button type="button" class="pHelpClose" aria-label="도움말 닫기">✕</button><div class="pHelpTitle">단축키 도움말</div><table>'+
+      sec('진행')+
+      row('← → · Space · Enter · 리모컨','슬라이드 넘기기 (PgUp/PgDn 클리커 호환)')+
+      row('숫자 + Enter','해당 번호 슬라이드로 바로 이동')+
+      row('Home / End','처음 / 마지막 슬라이드')+
+      sec('화면')+
+      row('B / W','강의장 화면 가리기 (검정/흰색) · 한 번 더 누르거나 슬라이드 넘기면 해제 — B는 발표자 창 [☕ 쉬는화면] 버튼으로 로고·안내문·QR·BGM 화면으로 꾸밀 수 있어요 (기본은 검은 화면)')+
+      row('F 또는 F5','전체화면 켜기/끄기')+
+      sec('판서 · 돋보기')+
+      row('D / G / E','펜 / 형광펜 / 지우개 — 발표자 창·강의장 화면 어디서 그려도 실시간 동기화 · Esc 종료')+
+      row('M','마우스 돋보기 (강의장 화면) · 휠로 배율 조절')+
+      row('Z','구역 확대 — 드래그한 영역을 화면에 꽉 채움 · 클릭=2배 · 다시 Z 또는 슬라이드 넘기면 원위치')+
+      row('⌘Fn F1(맥) · Win+P(윈도우)','화면 미러링 ↔ 확장 전환 (시연↔발표 · OS 시스템 단축키)')+
+      sec('발표자 창')+
+      row('P · ⌘K(맥) · Ctrl+K(윈도우)','발표자 창 열기')+
+      row('V','보기 전환 (다음 슬라이드 ↔ 필름스트립)')+
+      row('T / R','타이머 시작·일시정지 / 리셋(두 번 누름)')+
+      row('타이머 숫자 클릭','시작·일시정지 · 카운터 클릭 = 남은 장수 표시')+
+      row('? 또는 H','이 도움말 열고 닫기')+
+      '</table><div class="pHelpHint">Esc 또는 아무 곳이나 클릭하면 닫혀요 · 개선 아이디어는 <a href="mailto:ceo@dayfocuslab.com?subject=%5B%EB%B0%9C%ED%91%9C%EC%9E%90%20%EB%AA%A8%EB%93%9C%20%ED%94%BC%EB%93%9C%EB%B0%B1%5D" style="color:#8B9DEF;">ceo@dayfocuslab.com</a></div></div>';
+    el.addEventListener('click',()=>el.classList.remove('on'));
+    document.body.appendChild(el);
+  }
+  const on=(force!==undefined)?force:!el.classList.contains('on');
+  el.classList.toggle('on',on);
+}
+
+/* ── P 키: 발표자 창 띄우기 ── */
+/* [개선 10] 팝업 차단 안내에 원클릭 [다시 열기] 버튼 — 허용 후 바로 복구 */
+function showPopupWarning(){
+  let el=document.getElementById('popupWarn');
+  if(!el){
+    el=document.createElement('div');el.id='popupWarn';
+    el.innerHTML='팝업이 차단된 것 같아요 — 브라우저 주소창의 팝업 차단 아이콘을 눌러 허용해주세요.<br>'+
+      '<button type="button" id="popupRetry">허용했어요 — 다시 열기</button>';
+    document.body.appendChild(el);
+    el.querySelector('#popupRetry').addEventListener('click',()=>{el.style.display='none';openPresenter();});
+  }
+  el.style.display='block';
+  clearTimeout(window._popupWarnT);
+  window._popupWarnT=setTimeout(()=>{el.style.display='none';},12000);
+}
+function openPresenter(){
+  const url=location.pathname+location.search+'#presenter';
+  let win=null;
+  try{win=window.open(url,'dflPresenter','width=1320,height=840,menubar=no,toolbar=no');}catch(e){win=null;}
+  if(!win||win.closed||typeof win.closed==='undefined'){showPopupWarning();}
+  else{persist(i);try{win.focus();}catch(e){}}
+}
+
+/* ── 발표자 창 UI ── */
+/* 현재/다음 슬라이드 박스: 부모(pStageOuter) 크기에 맞춰 정확히 16:9로 리사이즈(레터박스 제거) + 내부 클론 스케일 갱신 */
+function updateStage(outerEl,stageEl,_retry){
+  if(!outerEl||!stageEl)return;
+  const w=outerEl.clientWidth,h=outerEl.clientHeight;
+  if(w>0&&h>0){
+    const s=Math.min(w/16,h/9);
+    stageEl.style.width=Math.max(1,Math.floor(s*16))+'px';
+    stageEl.style.height=Math.max(1,Math.floor(s*9))+'px';
+  }else if(!_retry){
+    /* 최초 마운트 시 부모가 아직 0×0인 경우(레이아웃 미확정) 다음 프레임에 한 번 재시도 */
+    requestAnimationFrame(()=>updateStage(outerEl,stageEl,true));
+    return;
+  }
+  const clone=stageEl.querySelector('.pDeckInnerClone');
+  if(clone){
+    const rect=stageEl.getBoundingClientRect();
+    const scale=rect.width>0?rect.width/1600:1;
+    clone.style.transform='scale('+scale+')';
+  }
+  if(isPresenter&&stageEl.id==='pCurrentStage')requestAnimationFrame(inkRedraw); /* [v5] 리사이즈 시 판서 다시 그리기 */
+}
+function cloneSlideInto(container,idx){
+  container.innerHTML='';
+  if(idx<0||idx>=slides.length)return;
+  const clone=slides[idx].cloneNode(true);
+  clone.classList.add('active');
+  clone.classList.add('pDeckInnerClone');
+  container.appendChild(clone);
+  updateStage(container.parentElement,container);
+}
+/* ResizeObserver: 현재/다음 슬라이드 박스 영역이 리사이즈(드래그·창크기변경)될 때마다 transform만 갱신(성능) */
+function initStageResize(){
+  if(!('ResizeObserver' in window))return;
+  const ro=new ResizeObserver(entries=>{
+    entries.forEach(en=>{
+      const outer=en.target;
+      const stage=outer.querySelector('.pStage');
+      if(stage)updateStage(outer,stage);
+    });
+  });
+  const cur=document.querySelector('.pCurrentWrap .pStageOuter');
+  const nxt=document.querySelector('.pNextWrap .pStageOuter');
+  if(cur)ro.observe(cur);
+  if(nxt)ro.observe(nxt);
+}
+/* [개선 18] 노트 글씨 크기 A−/A＋ (localStorage 기억) */
+const NOTE_SIZE_KEY='dfl-presenter-notesize-'+DECK_ID;
+function getNoteSize(){
+  try{const v=parseInt(localStorage.getItem(NOTE_SIZE_KEY),10);if(v>=14&&v<=36)return v;}catch(e){}
+  return 22;
+}
+function setNoteSize(px){
+  px=Math.max(14,Math.min(36,px));
+  const el=document.getElementById('pNotes');
+  if(el)el.style.fontSize=px+'px';
+  try{localStorage.setItem(NOTE_SIZE_KEY,String(px));}catch(e){}
+}
+function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* [개선 19] 노트 큐 자동 하이라이트: ⏰ 컷라인=주황 · ⚠️ 주의=빨강 · 백업=파랑 */
+function noteHTML(note){
+  return note.split('\n').map(line=>{
+    const e=escHTML(line);
+    if(line.indexOf('⏰')!==-1)return '<span class="pCueTime">'+e+'</span>';
+    if(line.indexOf('⚠️')!==-1)return '<span class="pCueWarn">'+e+'</span>';
+    if(line.indexOf('백업')!==-1)return '<span class="pCueBackup">'+e+'</span>';
+    return e;
+  }).join('\n');
+}
+function renderPresenter(){
+  cloneSlideInto(document.getElementById('pCurrentStage'),i);
+  /* [v5] 판서 캔버스 재부착 (cloneSlideInto가 내부를 비우므로 매 렌더마다) */
+  if(pInkCanvas){document.getElementById('pCurrentStage').appendChild(pInkCanvas);requestAnimationFrame(inkRedraw);}
+  const nextStage=document.getElementById('pNextStage');
+  if(i+1>=TOTAL){
+    /* [개선 20] 마지막 슬라이드: 빈 검정 박스 대신 안내 카드 */
+    nextStage.innerHTML='<div class="pEndCard"><span style="font-size:26px;">🏁</span>마지막 슬라이드예요</div>';
+    updateStage(nextStage.parentElement,nextStage);
+  }else cloneSlideInto(nextStage,i+1);
+  const note=NOTES[i]||'';
+  const notesEl=document.getElementById('pNotes');
+  if(note)notesEl.innerHTML=noteHTML(note);
+  else notesEl.textContent='(이 슬라이드는 별도 노트가 없어요)';
+  notesEl.classList.toggle('pEmpty',!note);
+  document.getElementById('pCounter').textContent=window._counterRemain?('남은 '+(TOTAL-1-i)+'장'):(String(i+1).padStart(2,'0')+' / '+TOTAL); /* [v3-10] */
+  /* [v3-16] 다음 슬라이드 노트 미리보기 */
+  const nn=document.getElementById('pNextNote');
+  if(nn){
+    const nxt=(i+1<TOTAL)?(NOTES[i+1]||''):'';
+    if(nxt){nn.style.display='block';nn.textContent='다음 노트: '+nxt.split('\n')[0].slice(0,140);}
+    else nn.style.display='none';
+  }
+  /* [개선 21] 진행률 바 */
+  const fill=document.getElementById('pProgressFill');
+  if(fill)fill.style.width=((i+1)/TOTAL*100).toFixed(2)+'%';
+  /* [개선 28] 창 제목에 진행 상황 — 탭/독에서 바로 보임 */
+  document.title='발표자 '+(i+1)+'/'+TOTAL+' — '+DECK_TITLE;
+  /* [개선 27] 처음/끝에서 이전·다음 버튼 비활성 표시 */
+  const prevB=document.getElementById('pPrev'),nextB=document.getElementById('pNext');
+  if(prevB)prevB.disabled=(i===0);
+  if(nextB)nextB.disabled=(i===TOTAL-1);
+  updateFilmstripHighlight();
+}
+
+/* ── 필름스트립 썸네일 크기: 슬라이더로 실시간 조절 + localStorage 기억 ── */
+const THUMB_SIZE_KEY='dfl-presenter-thumbsize-'+DECK_ID;
+function getThumbSize(){
+  try{const v=parseInt(localStorage.getItem(THUMB_SIZE_KEY),10);if(v>=120&&v<=640)return v;}catch(e){}
+  return 224;
+}
+function setThumbSize(px){
+  px=Math.max(120,Math.min(640,px));
+  const root=document.getElementById('presenterRoot');
+  if(root)root.style.setProperty('--thumbW',px+'px');
+  const scale=px/1600;
+  document.querySelectorAll('#pFilmstrip .pDeckInnerClone').forEach(el=>{el.style.transform='scale('+scale+')';});
+  try{localStorage.setItem(THUMB_SIZE_KEY,String(px));}catch(e){}
+  scrollToCurrentThumb(false); /* [버그픽스] 리사이즈 후에도 현재 슬라이드가 화면에 고정 */
+}
+/* [v3-19] 필름스트립을 현재 슬라이드 위치로 */
+function scrollToCurrentThumb(smooth){
+  const strip=document.getElementById('pFilmstrip');
+  if(!strip)return;
+  const cur=strip.children[i];
+  if(cur)cur.scrollIntoView({behavior:smooth?'smooth':'auto',inline:'center',block:'center'});
+}
+function initThumbSizeControl(){
+  const range=document.getElementById('pThumbSize');
+  if(!range)return;
+  range.value=String(getThumbSize());
+  range.addEventListener('input',()=>{setThumbSize(parseInt(range.value,10)||224);});
+}
+/* ── 필름스트립: 전체 96장 썸네일, 최초 1회만 클론 생성(성능) ── */
+let filmstripBuilt=false;
+function buildFilmstrip(){
+  const strip=document.getElementById('pFilmstrip');
+  if(!strip||filmstripBuilt)return;
+  filmstripBuilt=true;
+  function makeOne(idx){
+    const scale=getThumbSize()/1600;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='pThumb';
+    btn.setAttribute('aria-label','슬라이드 '+(idx+1)+'번으로 이동');
+    btn.title='슬라이드 '+(idx+1)+(NOTES[idx]?' · 노트 있음':''); /* [v3-18] hover 툴팁 */
+    const stage=document.createElement('div');
+    stage.className='pThumbStage';
+    const clone=slides[idx].cloneNode(true);
+    clone.classList.add('active');
+    clone.classList.add('pDeckInnerClone');
+    clone.style.transform='scale('+scale+')';
+    stage.appendChild(clone);
+    btn.appendChild(stage);
+    const num=document.createElement('span');
+    num.className='pThumbNum';
+    num.textContent=String(idx+1);
+    btn.appendChild(num);
+    /* [개선 22] 노트 있는 슬라이드에 ✎ 배지 */
+    if(NOTES[idx]){
+      const dot=document.createElement('span');
+      dot.className='pThumbNoteDot';
+      dot.title='강사 노트 있음';
+      dot.textContent='✎';
+      btn.appendChild(dot);
+    }
+    btn.addEventListener('click',()=>show(idx));
+    return btn;
+  }
+  /* [v3-20] 96장 클론을 12장씩 나눠 생성 — 발표자 창이 즉시 뜨고 나머지는 배경에서 채움 */
+  const CHUNK=12;
+  function addChunk(start){
+    const frag=document.createDocumentFragment();
+    for(let k=start;k<Math.min(start+CHUNK,slides.length);k++)frag.appendChild(makeOne(k));
+    strip.appendChild(frag);
+    if(start+CHUNK<slides.length)setTimeout(()=>addChunk(start+CHUNK),0);
+    else updateFilmstripHighlight();
+  }
+  addChunk(0);
+}
+function updateFilmstripHighlight(){
+  const strip=document.getElementById('pFilmstrip');
+  if(!strip||!filmstripBuilt)return;
+  const current=strip.children[i];
+  [...strip.children].forEach((btn,idx)=>btn.classList.toggle('pThumbCurrent',idx===i));
+  if(current)current.scrollIntoView({behavior:'auto',inline:'center',block:'nearest'});
+}
+/* ── 상단(현재+다음 슬라이드) 높이: 드래그 스플리터 + 토글 버튼이 공유하는 단일 상태. localStorage 기억 ── */
+const TOP_HEIGHT_KEY='dfl-presenter-toph-'+DECK_ID;
+function getSavedTopHeight(){
+  try{const v=parseFloat(localStorage.getItem(TOP_HEIGHT_KEY));if(v>=100&&v<=3000)return v;}catch(e){}
+  return null;
+}
+/* pTop 높이의 상/하한을 창 실제 높이 기준으로 통일(드래그·토글이 같은 clamp 공유) */
+function clampTopHeight(px,rootH){
+  const min=120;
+  const max=Math.max(min,(rootH||800)-260);
+  return Math.max(min,Math.min(max,px));
+}
+function applyTopHeight(px){
+  const top=document.getElementById('pTop');
+  const root=document.getElementById('presenterRoot');
+  if(!top)return;
+  const clamped=clampTopHeight(px,root?root.clientHeight:800);
+  top.style.flex='0 1 '+Math.round(clamped)+'px';
+  try{localStorage.setItem(TOP_HEIGHT_KEY,String(Math.round(clamped)));}catch(e){}
+}
+function toggleViewMode(){
+  const top=document.getElementById('pTop');
+  const root=document.getElementById('presenterRoot');
+  if(!top||!root)return;
+  const curH=top.getBoundingClientRect().height;
+  const rootH=root.clientHeight||curH*2;
+  const btn=document.getElementById('pViewToggle');
+  if(curH<rootH*0.4){
+    applyTopHeight(Math.round(rootH*0.62));
+    if(btn)btn.textContent='▸ 필름스트립 크게 보기';
+  }else{
+    applyTopHeight(220);
+    if(btn)btn.textContent='▸ 다음 슬라이드 크게 보기';
+  }
+}
+/* ── 상하 드래그 리사이저: 마우스/터치로 pTop 높이를 직접 조정 ── */
+function initSplitter(){
+  const splitter=document.getElementById('pSplitter');
+  const top=document.getElementById('pTop');
+  if(!splitter||!top)return;
+  let dragging=false,startY=0,startH=0;
+  function clientY(e){return e.touches&&e.touches.length?e.touches[0].clientY:e.clientY;}
+  function onMove(e){
+    if(!dragging)return;
+    const dy=clientY(e)-startY;
+    const root=document.getElementById('presenterRoot');
+    const rootH=root?root.clientHeight:800;
+    const newH=clampTopHeight(startH+dy,rootH);
+    top.style.flex='0 1 '+Math.round(newH)+'px';
+    e.preventDefault&&e.preventDefault();
+  }
+  function onUp(){
+    if(!dragging)return;
+    dragging=false;
+    document.body.classList.remove('pSplitterDragging');
+    removeEventListener('mousemove',onMove);
+    removeEventListener('mouseup',onUp);
+    removeEventListener('touchmove',onMove);
+    removeEventListener('touchend',onUp);
+    const h=top.getBoundingClientRect().height;
+    try{localStorage.setItem(TOP_HEIGHT_KEY,String(Math.round(h)));}catch(e){}
+  }
+  function onDown(e){
+    dragging=true;
+    startY=clientY(e);
+    startH=top.getBoundingClientRect().height;
+    document.body.classList.add('pSplitterDragging');
+    addEventListener('mousemove',onMove);
+    addEventListener('mouseup',onUp);
+    addEventListener('touchmove',onMove,{passive:false});
+    addEventListener('touchend',onUp);
+    e.preventDefault();
+  }
+  splitter.addEventListener('mousedown',onDown);
+  splitter.addEventListener('touchstart',onDown,{passive:false});
+}
+/* ── 현재↔다음 슬라이드 폭 비율: 좌우 드래그 스플리터. localStorage 기억 ── */
+const NEXT_W_KEY='dfl-presenter-nextw-'+DECK_ID;
+function getSavedNextWidth(){
+  try{const v=parseFloat(localStorage.getItem(NEXT_W_KEY));if(v>=100&&v<=2000)return v;}catch(e){}
+  return null;
+}
+function clampNextWidth(px,topWidth){
+  const min=140;
+  const max=Math.max(min,(topWidth||900)-320);
+  return Math.max(min,Math.min(max,px));
+}
+function applyNextWidth(px){
+  const root=document.getElementById('presenterRoot');
+  const top=document.getElementById('pTop');
+  if(!root)return;
+  const clamped=clampNextWidth(px,top?top.clientWidth:900);
+  root.style.setProperty('--nextW',Math.round(clamped)+'px');
+  try{localStorage.setItem(NEXT_W_KEY,String(Math.round(clamped)));}catch(e){}
+}
+/* pNextWrap은 flex-shrink:0(고정폭)이라 마운트 후 창 크기가 바뀌어도 저절로 줄지 않음 —
+   창 리사이즈 때마다 현재 --nextW를 최신 pTop 폭 기준으로 다시 clamp해서 현재 슬라이드 박스가 눌리는 것을 방지 */
+function reclampNextWidthOnResize(){
+  const root=document.getElementById('presenterRoot');
+  if(!root)return;
+  const cur=parseFloat(getComputedStyle(root).getPropertyValue('--nextW'))||240;
+  applyNextWidth(cur);
+}
+function initHSplitter(){
+  const splitter=document.getElementById('pHSplitter');
+  const nextWrap=document.getElementById('pNextWrap');
+  const top=document.getElementById('pTop');
+  if(!splitter||!nextWrap||!top)return;
+  let dragging=false,startX=0,startW=0;
+  function clientX(e){return e.touches&&e.touches.length?e.touches[0].clientX:e.clientX;}
+  function onMove(e){
+    if(!dragging)return;
+    const dx=clientX(e)-startX;
+    /* 스플리터가 next 박스 왼쪽에 있으므로 오른쪽으로 끌면(dx>0) next 폭이 줄어듦 */
+    applyNextWidth(startW-dx);
+    e.preventDefault&&e.preventDefault();
+  }
+  function onUp(){
+    if(!dragging)return;
+    dragging=false;
+    document.body.classList.remove('pHSplitterDragging');
+    removeEventListener('mousemove',onMove);
+    removeEventListener('mouseup',onUp);
+    removeEventListener('touchmove',onMove);
+    removeEventListener('touchend',onUp);
+  }
+  function onDown(e){
+    dragging=true;
+    startX=clientX(e);
+    startW=nextWrap.getBoundingClientRect().width;
+    document.body.classList.add('pHSplitterDragging');
+    addEventListener('mousemove',onMove);
+    addEventListener('mouseup',onUp);
+    addEventListener('touchmove',onMove,{passive:false});
+    addEventListener('touchend',onUp);
+    e.preventDefault();
+  }
+  splitter.addEventListener('mousedown',onDown);
+  splitter.addEventListener('touchstart',onDown,{passive:false});
+}
+/* [개선 13~17] 타이머: 시작/일시정지 단일 토글 · 경과 유지(창 재오픈 복원) · 목표 시간·남은 시간 · 리셋 2번 확인 */
+const TIMER_KEY='dfl-presenter-timer-'+DECK_ID;
+let timerMs=0,timerRunning=false,timerHandle=null,timerLast=0,timerTarget=0;
+function fmtTime(ms){
+  const neg=ms<0;const s=Math.floor(Math.abs(ms)/1000);const m=Math.floor(s/60);const ss=s%60;
+  return (neg?'-':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+function saveTimer(){
+  try{localStorage.setItem(TIMER_KEY,JSON.stringify({ms:timerMs,running:timerRunning,last:Date.now(),target:timerTarget}));}catch(e){}
+}
+function loadTimer(){
+  /* [개선 14] 발표자 창을 실수로 닫아도 경과 시간이 이어짐 */
+  try{
+    const d=JSON.parse(localStorage.getItem(TIMER_KEY));
+    if(d&&typeof d.ms==='number'){
+      timerMs=d.ms;timerTarget=d.target||0;
+      if(d.running&&d.last){timerMs+=Date.now()-d.last;startTimer();}
+    }
+  }catch(e){}
+}
+function updateTimerUI(){
+  const disp=document.getElementById('pTimerDisplay');if(!disp)return;
+  disp.textContent=fmtTime(timerMs);
+  disp.classList.toggle('running',timerRunning);
+  disp.classList.toggle('overrun',timerTarget>0&&timerMs>timerTarget*60000); /* [v3-13] 초과 시 펄스 */
+  const btn=document.getElementById('pTimerToggle');
+  if(btn){btn.textContent=timerRunning?'⏸ 일시정지':'▶ 시작';btn.classList.toggle('on',timerRunning);}
+  const rem=document.getElementById('pTimerRemain');
+  if(rem){
+    if(timerTarget>0){
+      const left=timerTarget*60000-timerMs;
+      rem.style.display='inline-block';
+      rem.textContent=(left<0?'초과 ':'남은 ')+fmtTime(left);
+      rem.classList.toggle('over',left<0);
+      rem.classList.toggle('soon',left>=0&&left<5*60000);
+    }else rem.style.display='none';
+  }
+}
+let _prevLeft=null;
+function tickTimer(){
+  const now=Date.now();timerMs+=now-timerLast;timerLast=now;
+  if(timerTarget>0){
+    const left=timerTarget*60000-timerMs;
+    if(_prevLeft!==null){
+      if(left<=5*60000&&_prevLeft>5*60000)edgeToast('⏳ 목표까지 5분 남았어요'); /* [v3-12] */
+      if(left<=0&&_prevLeft>0)edgeToast('⏰ 목표 시간에 도달했어요'); /* [v3-11] */
+    }
+    _prevLeft=left;
+  }
+  updateTimerUI();saveTimer();
+}
+function startTimer(){if(timerRunning)return;timerRunning=true;timerLast=Date.now();timerHandle=setInterval(tickTimer,500);updateTimerUI();saveTimer();}
+function pauseTimer(){if(!timerRunning)return;timerRunning=false;clearInterval(timerHandle);updateTimerUI();saveTimer();}
+function toggleTimer(){if(timerRunning)pauseTimer();else startTimer();}
+/* [개선 16] 리셋 오조작 방지 — 2.2초 안에 한 번 더 눌러야 진짜 리셋 */
+let resetArmed=false,resetArmT=null;
+function resetTimerPress(){
+  const btn=document.getElementById('pTimerReset');
+  if(!resetArmed){
+    resetArmed=true;
+    if(btn){btn.textContent='한 번 더 → 리셋';btn.classList.add('armed');}
+    resetArmT=setTimeout(()=>{resetArmed=false;if(btn){btn.textContent='리셋';btn.classList.remove('armed');}},2200);
+  }else{
+    clearTimeout(resetArmT);resetArmed=false;
+    if(btn){btn.textContent='리셋';btn.classList.remove('armed');}
+    pauseTimer();timerMs=0;_prevLeft=null;updateTimerUI();saveTimer();
+  }
+}
+function initTimer(){
+  document.getElementById('pTimerToggle').onclick=toggleTimer;
+  document.getElementById('pTimerDisplay').onclick=toggleTimer; /* [v3-14] 큰 클릭 타겟 */
+  document.getElementById('pTimerDisplay').title='클릭: 시작/일시정지 (T)';
+  document.getElementById('pTimerReset').onclick=resetTimerPress;
+  /* [개선 17] 목표 시간(분) 설정 → 남은 시간 칩 표시 */
+  const tBtn=document.getElementById('pTimerTarget');
+  const tInput=document.getElementById('pTargetInput');
+  tBtn.onclick=()=>{
+    tInput.style.display='inline-block';
+    tInput.value=timerTarget||'';
+    tInput.focus();if(tInput.select)tInput.select();
+  };
+  function commitTarget(){
+    const v=parseInt(tInput.value,10);
+    timerTarget=(v>=1&&v<=600)?v:0;
+    _prevLeft=null;
+    tInput.style.display='none';
+    updateTimerUI();saveTimer();
+  }
+  tInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();commitTarget();}
+    else if(e.key==='Escape')tInput.style.display='none';
+    e.stopPropagation();
+  });
+  tInput.addEventListener('blur',commitTarget);
+  loadTimer();
+  updateTimerUI();
+}
+/* [개선 12] 현재 시각 시계 */
+const CLOCK_SEC_KEY='dfl-presenter-clocksec-'+DECK_ID;
+function initClock(){
+  const el=document.getElementById('pClock');if(!el)return;
+  let showSec=false;
+  try{showSec=localStorage.getItem(CLOCK_SEC_KEY)==='1';}catch(e){}
+  function upd(){
+    const d=new Date();
+    el.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+(showSec?':'+String(d.getSeconds()).padStart(2,'0'):'');
+  }
+  el.style.cursor='pointer';
+  el.title='현재 시각 · 클릭하면 초까지 보여요';
+  el.onclick=()=>{showSec=!showSec;try{localStorage.setItem(CLOCK_SEC_KEY,showSec?'1':'');}catch(e){}upd();}; /* [v3-15] */
+  upd();setInterval(upd,1000);
+}
+/* [v3-3] 라이트 테마 토글 */
+const THEME_KEY='dfl-presenter-theme-'+DECK_ID;
+function applyTheme(){
+  /* 기본 = 라이트(브랜드 톤). 'dark' 저장 시에만 다크 — 어두운 강의장용 */
+  let dark=false;
+  try{dark=localStorage.getItem(THEME_KEY)==='dark';}catch(e){}
+  document.body.classList.toggle('pLight',!dark);
+  const b=document.getElementById('pThemeToggle');
+  if(b)b.textContent=dark?'☀️ 밝은 배경':'🌙 어두운 배경';
+}
+function toggleTheme(){
+  try{localStorage.setItem(THEME_KEY,document.body.classList.contains('pLight')?'dark':'');}catch(e){}
+  applyTheme();
+}
+/* [v3-17] 노트 접기/펼치기 */
+const FOLD_KEY='dfl-presenter-notefold-'+DECK_ID;
+function applyNoteFold(){
+  let f=false;
+  try{f=localStorage.getItem(FOLD_KEY)==='1';}catch(e){}
+  const n=document.getElementById('pNotes');const b=document.getElementById('pNoteFold');
+  if(n)n.classList.toggle('folded',f);
+  if(b){b.textContent=f?'펼치기 ⌃':'접기 ⌄';b.title=f?'노트 펼치기':'노트 접기 (공간 확보)';}
+}
+/* [v3-30] 발표자 창이 너무 작을 때 안내 */
+function checkPresenterSize(){
+  let el=document.getElementById('pTooSmall');
+  if(!el){el=document.createElement('div');el.id='pTooSmall';el.textContent='창이 너무 작아요 — 창을 키우면 모든 기능이 보여요';document.body.appendChild(el);}
+  el.style.display=(innerWidth<640||innerHeight<480)?'block':'none';
+}
+/* [개선 9] 강의장 화면 연결 상태 칩 (하트비트 기반) */
+function initConnChip(){
+  const chip=document.getElementById('pConnChip');
+  if(!chip)return;
+  if(!BC){chip.style.display='none';return;}
+  setInterval(()=>{try{BC.postMessage({type:'ping',idx:i});}catch(e){}},2000);
+  setInterval(()=>{
+    const ok=Date.now()-lastPong<5000;
+    chip.classList.toggle('ok',ok);
+    chip.textContent=ok?'● 강의장 화면 연결됨':'○ 강의장 화면 응답 없음';
+    chip.title=ok?'강의장 화면과 실시간 동기화 중이에요':'강의장 화면이 닫혔거나 응답이 없어요 — 슬라이드 창이 열려 있는지 확인해주세요';
+  },1000);
+}
+function initPresenter(){
+  document.body.classList.add('presenter-mode');
+  const root=document.createElement('div');
+  root.id='presenterRoot';
+  root.innerHTML=
+    '<div id="pProgress"><div id="pProgressFill"></div></div>'+
+    '<div class="pTop" id="pTop">'+
+      '<div class="pCurrentWrap"><div class="pTag">현재 슬라이드 <span class="pTagHint">클릭=다음 · 왼쪽 끝=이전</span></div><div class="pStageOuter pClickNav" id="pCurClick" title="클릭: 다음 슬라이드 (왼쪽 끝: 이전)"><div class="pStage" id="pCurrentStage"></div></div></div>'+
+      '<div class="pHSplitter" id="pHSplitter" title="드래그해서 폭 조정"><span></span><span></span><span></span></div>'+
+      '<div class="pNextWrap" id="pNextWrap"><div class="pTag">다음 슬라이드</div><div class="pStageOuter"><div class="pStage pStageSmall" id="pNextStage"></div></div></div>'+
+    '</div>'+
+    '<div class="pSplitter" id="pSplitter" title="드래그해서 영역 크기 조정"><span></span><span></span><span></span></div>'+
+    '<div class="pFilmstripWrap">'+
+      '<div class="pFilmstripHeader">'+
+        '<div class="pFilmstripHeaderLeft">'+
+          '<span class="pTag pTagKo" style="margin-bottom:0;">전체 흐름 · 클릭해서 이동</span>'+
+          '<div class="pSizeCtrl">'+
+            '<span class="pSizeLabel">썸네일 크기</span>'+
+            '<span class="pSizeIcon">−</span>'+
+            '<input type="range" id="pThumbSize" min="120" max="640" step="4" value="'+getThumbSize()+'" aria-label="썸네일 크기 조절">'+
+            '<span class="pSizeIcon">＋</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="pFilmstripHeaderRight">'+
+          '<button type="button" id="pLocBtn" class="pToggleBtn" title="필름스트립을 현재 슬라이드 위치로 스크롤">◎ 현재 위치</button>'+
+          '<button type="button" id="pThemeToggle" class="pToggleBtn" title="발표자 창 배경 밝게/어둡게 전환"></button>'+
+          '<button type="button" id="pViewToggle" class="pToggleBtn" title="보기 전환 (V)">▸ 다음 슬라이드 크게 보기</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="pFilmstrip" id="pFilmstrip"></div>'+
+    '</div>'+
+    '<div class="pBottom">'+
+      '<div class="pNotesWrap"><div class="pNotes" id="pNotes"></div>'+
+        '<div class="pNextNote" id="pNextNote" style="display:none;" title="다음 슬라이드의 노트 첫 줄"></div>'+
+        '<div class="pNoteSize">'+
+          '<button type="button" id="pNoteFold" title="노트 접기 (공간 확보)">접기 ⌄</button>'+
+          '<button type="button" id="pNoteMinus" title="노트 글씨 작게" aria-label="노트 글씨 작게">A−</button>'+
+          '<button type="button" id="pNotePlus" title="노트 글씨 크게" aria-label="노트 글씨 크게">A＋</button>'+
+        '</div></div>'+
+      '<div class="pControls">'+
+        '<div class="pNav"><button id="pPrev" title="이전 슬라이드 (←)">← 이전</button><button id="pNext" title="다음 슬라이드 (→ 또는 Space)">다음 →</button></div>'+
+        '<div class="pCounter" id="pCounter" title="클릭하면 남은 장수로 바뀌어요">01 / '+TOTAL+'</div>'+
+        '<span class="pDwell" id="pDwell" title="이 슬라이드에 머문 시간">00:00</span>'+
+        '<span class="pCtrlSep"></span>'+
+        '<span class="pConnChip" id="pConnChip" role="status">○ 확인 중…</span>'+
+        '<span class="pBlackChip" id="pBlackChip" style="display:none;"></span>'+
+        '<span class="pBlackChip" id="pZoomChip" style="display:none;background:#8FC6FF;cursor:pointer;" title="클릭하면 확대 해제 (Z)">🔎 구역 확대 중 · Z 해제</span>'+
+        '<button type="button" id="pBlackBtn" class="pCtlBtn" title="강의장 화면 가리기/해제 (B)">⬛ 가리기</button>'+
+        '<button type="button" id="pInkBtn" class="pCtlBtn" title="판서 펜 켜기/끄기 (D) — 현재 슬라이드 위에 그리면 강의장 화면에도 실시간으로 보여요">✏️ 판서</button>'+
+        '<button type="button" id="pBreakCfgBtn" class="pCtlBtn" title="쉬는 시간(B) 화면 꾸미기 — 로고·문구·QR·시계·BGM (기본은 검은 화면)">☕ 쉬는화면</button>'+
+        '<button type="button" id="pHelpBtn" class="pCtlBtn" title="단축키 도움말 (? 또는 H)">? 단축키</button>'+
+        '<span class="pCtrlSep"></span>'+
+        '<div class="pTimer">'+
+          '<span class="pClock" id="pClock" title="현재 시각"></span>'+
+          '<span class="pTimerDisplay" id="pTimerDisplay" title="경과 시간">00:00</span>'+
+          '<span class="pTimerRemain" id="pTimerRemain" style="display:none;"></span>'+
+          '<button id="pTimerToggle" title="타이머 시작/일시정지 (T)">▶ 시작</button>'+
+          '<button id="pTimerReset" title="두 번 누르면 리셋 (R)">리셋</button>'+
+          '<button id="pTimerTarget" title="목표 시간(분)을 정하면 남은 시간을 보여줘요">목표</button>'+
+          '<input id="pTargetInput" type="number" min="1" max="600" placeholder="분" style="display:none;" aria-label="목표 시간(분)">'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(root);
+  /* [개선 23] 현재 슬라이드 클릭 네비게이션 — 클릭=다음, 왼쪽 28%=이전 */
+  const nextOuter=document.querySelector('.pNextWrap .pStageOuter'); /* [UX] 다음 슬라이드 클릭 = 이동 */
+  if(nextOuter){nextOuter.style.cursor='pointer';nextOuter.title='클릭: 다음 슬라이드로 이동';nextOuter.addEventListener('click',()=>show(i+1));}
+  const curClick=document.getElementById('pCurClick');
+  curClick.addEventListener('click',e=>{
+    const r=curClick.getBoundingClientRect();
+    if((e.clientX-r.left)<r.width*0.28)show(i-1);else show(i+1);
+  });
+  document.getElementById('pNoteMinus').onclick=()=>setNoteSize(getNoteSize()-2);
+  document.getElementById('pNotePlus').onclick=()=>setNoteSize(getNoteSize()+2);
+  setNoteSize(getNoteSize());
+  /* [개선 8] 첫 실행 온보딩 배너 (1회만) */
+  try{
+    if(!localStorage.getItem('dfl-presenter-onboard-'+DECK_ID)){
+      const ob=document.createElement('div');ob.id='pOnboard';
+      ob.innerHTML='<span><strong>발표자 창이 처음이세요?</strong> ← →로 넘기고 <strong>D</strong> 판서 · <strong>Z</strong> 구역 확대 · <strong>B</strong> 쉬는화면을 눌러보세요. 쉬는화면은 하단 <strong>[☕ 쉬는화면]</strong> 버튼에서 프리셋으로 꾸밀 수 있고, 전체 단축키는 <strong>[? 단축키]</strong>(또는 ?)에 있어요.</span>'+
+        '<button type="button" id="pOnboardOk">알겠어요</button>';
+      root.insertBefore(ob,document.getElementById('pTop'));
+      document.getElementById('pOnboardOk').onclick=()=>{
+        ob.remove();
+        try{localStorage.setItem('dfl-presenter-onboard-'+DECK_ID,'1');}catch(e){}
+      };
+    }
+  }catch(e){}
+  const savedTopH=getSavedTopHeight();
+  if(savedTopH){
+    const rh=root.clientHeight||800;
+    document.getElementById('pTop').style.flex='0 1 '+Math.round(clampTopHeight(savedTopH,rh))+'px';
+  }
+  const savedNextW=getSavedNextWidth();
+  if(savedNextW){
+    const tw=document.getElementById('pTop').clientWidth||900;
+    root.style.setProperty('--nextW',Math.round(clampNextWidth(savedNextW,tw))+'px');
+  }
+  setThumbSize(getThumbSize());
+  document.getElementById('pPrev').onclick=()=>show(i-1);
+  document.getElementById('pNext').onclick=()=>show(i+1);
+  document.getElementById('pViewToggle').onclick=toggleViewMode;
+  document.getElementById('pThemeToggle').onclick=toggleTheme; /* [v3-3] */
+  document.getElementById('pLocBtn').onclick=()=>scrollToCurrentThumb(true); /* [v3-19] */
+  document.getElementById('pHelpBtn').onclick=()=>toggleHelp(); /* [v3-1] 단축키를 화면에서 바로 */
+  document.getElementById('pBlackBtn').onclick=()=>setBlackout(blackoutMode||'black'); /* [v3-4] */
+  /* [v5] 발표자 창 판서: 현재 슬라이드 박스 위 캔버스 + ✏️ 버튼 */
+  pInkCanvas=document.createElement('canvas');
+  pInkCanvas.id='pInkCanvas';
+  inkAttach(pInkCanvas);
+  document.getElementById('pInkBtn').onclick=()=>inkSetTool(inkTool?null:'pen');
+  inkSend({op:'req'}); /* 먼저 열려 있던 창의 판서 상태 받아오기 */
+  document.getElementById('pZoomChip').onclick=()=>zoomToggle(); /* [v5.1] */
+  document.getElementById('pBreakCfgBtn').onclick=()=>toggleBreakCfg(); /* [v5.2] */
+  document.getElementById('pNoteFold').onclick=()=>{ /* [v3-17] */
+    try{localStorage.setItem(FOLD_KEY,localStorage.getItem(FOLD_KEY)==='1'?'':'1');}catch(e){}
+    applyNoteFold();
+  };
+  let counterRemain=false; /* [v3-10] 카운터 클릭 = 남은 장수 */
+  document.getElementById('pCounter').onclick=()=>{
+    counterRemain=!counterRemain;
+    window._counterRemain=counterRemain;
+    renderPresenter();
+  };
+  setInterval(()=>{ /* [v3-9] 슬라이드 체류 시간 */
+    const el=document.getElementById('pDwell');
+    if(el)el.textContent=fmtTime(Date.now()-_dwellStart);
+  },1000);
+  applyTheme();
+  applyNoteFold();
+  checkPresenterSize();
+  addEventListener('resize',checkPresenterSize);
+  initTimer();
+  initClock();
+  initConnChip();
+  initStageResize();
+  initSplitter();
+  initHSplitter();
+  buildFilmstrip();
+  initThumbSizeControl();
+  renderPresenter();
+  applyBlackout();
+}
+
+const presenterBtnEl=document.getElementById('presenterBtn');
+if(presenterBtnEl)presenterBtnEl.addEventListener('click',()=>{if(!isPresenter)openPresenter();});
+
+addEventListener('keydown',e=>{
+  const tag=e.target&&e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA')return; /* 입력 중엔 단축키 무시 */
+  /* ⌘K: 발표자 모드 열기 — 브라우저 예약 단축키가 아니라 가로채기 가능(⌘L은 주소창 예약이라 미사용) */
+  if((e.metaKey||e.ctrlKey)&&e.code==='KeyK'){ /* [v3-26] 맥 ⌘K + 윈도우 Ctrl+K */
+    if(!isPresenter){e.preventDefault();openPresenter();}
+    return;
+  }
+  /* [개선 27] ⌘/Ctrl/Alt 조합키는 브라우저 기본 동작에 전부 양보 (⌘← 뒤로가기 등과 충돌 제거) */
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  /* [개선 3] 숫자 + Enter 점프 */
+  const dm=e.code.match(/^(?:Digit|Numpad)(\d)$/);
+  if(dm){jumpDigit(dm[1]);return;}
+  if(e.key==='Enter'){
+    if(jumpBuf){e.preventDefault();jumpCommit();return;}
+    if(tag==='BUTTON')return; /* 버튼 포커스 시 Enter는 버튼에 양보 */
+    show(i+1);return;
+  }
+  if(e.key==='Escape'){
+    if(inkTool){inkSetTool(null);return;} /* [v5] 판서 먼저 종료 */
+    if(zoomSelMode||zoomRegion){zoomToggle();return;} /* [v5.1] 구역 확대 종료 */
+    const bco=document.getElementById('breakCfgOverlay');if(bco&&bco.classList.contains('on')){bco.classList.remove('on');return;} /* [v5.2] */
+    jumpBuf='';updateJumpToast();
+    toggleHelp(false);
+    return;
+  }
+  if(e.key==='?'){toggleHelp();return;}
+  /* e.code(물리 키 위치) 기준 — 한/영 입력 모드와 무관하게 항상 반응 */
+  switch(e.code){
+    /* [개선 1] 리모컨(클리커) 호환: PgUp/PgDn·Space·Backspace */
+    case 'ArrowRight':case 'PageDown':e.preventDefault();show(i+1);break;
+    case 'ArrowLeft':case 'PageUp':e.preventDefault();show(i-1);break;
+    case 'Space':if(tag==='BUTTON')return;e.preventDefault();show(e.shiftKey?i-1:i+1);break;
+    case 'Backspace':e.preventDefault();show(i-1);break;
+    /* [개선 2] Home/End 점프 */
+    case 'Home':e.preventDefault();show(0);break;
+    case 'End':e.preventDefault();show(TOTAL-1);break;
+    case 'KeyP':if(!isPresenter)openPresenter();break;
+    case 'KeyV':if(isPresenter)toggleViewMode();break;
+    case 'KeyB':setBlackout('black');break;
+    case 'KeyW':setBlackout('white');break;
+    case 'KeyF':toggleFullscreen();break;
+    case 'F5':e.preventDefault();toggleFullscreen();break; /* [v3-22] 파워포인트 습관·클리커 F5 호환 */
+    case 'KeyT':if(isPresenter)toggleTimer();break;
+    case 'KeyR':if(isPresenter)resetTimerPress();break;
+    case 'KeyH':toggleHelp();break;
+    /* [v5] 판서 · 돋보기 */
+    case 'KeyD':inkSetTool('pen');break;
+    case 'KeyG':inkSetTool('hl');break;
+    case 'KeyE':inkSetTool('erase');break;
+    case 'KeyM':magToggle();break;
+    case 'KeyZ':zoomToggle();break;
+  }
+});
+
+/* [모바일] 슬라이드 좌우 탭 이동 — 키보드가 없는 모바일에서도 넘길 수 있게. 왼쪽 절반 탭=이전, 오른쪽 절반 탭=다음 */
+inner.addEventListener('click',e=>{
+  if(isPresenter)return; /* 발표자 창에서는 탭 이동 비활성 — 전용 컨트롤 사용 */
+  if(inkTool||zoomSelMode)return; /* 판서·구역확대 중엔 탭이 해당 도구에 우선 배정 */
+  if(e.target.closest('a,button,input,textarea'))return; /* 슬라이드 내 실제 링크·버튼은 원래 동작 유지 */
+  const rect=inner.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  if(x<rect.width/2)show(i-1);else show(i+1);
+});
+
+/* [개선 29] 타이머 작동 중 발표자 창을 닫으려 하면 한 번 확인 (실수 ⌘W 방지) */
+addEventListener('beforeunload',e=>{
+  if(isPresenter&&timerRunning){e.preventDefault();e.returnValue='';}
+});
+
+if(isPresenter){
+  try{const saved=localStorage.getItem(LS_KEY);if(saved!==null)i=Math.max(0,Math.min(parseInt(saved,10)||0,TOTAL-1));}catch(e){}
+  applyBlackoutFromStore();
+  initPresenter();
+  render();
+  addEventListener('resize',renderPresenter);
+  addEventListener('resize',reclampNextWidthOnResize);
+}else{
+  /* 청중 창 새로 열릴 땐 지난 세션의 블랙아웃 상태를 항상 해제 (열자마자 검은 화면 방지) */
+  blackoutMode=null;
+  try{localStorage.setItem(BLACK_KEY,'');}catch(e){}
+  applyBlackout();
+  /* [v5] 청중 창 판서 캔버스 — deck 안에 넣어 화면 배율을 그대로 상속 */
+  const inkCv=document.createElement('canvas');
+  inkCv.id='inkCanvas';inkCv.width=3200;inkCv.height=1800;
+  inner.appendChild(inkCv);
+  inkAttach(inkCv);
+  addEventListener('resize',fit);fit();show(0);render();
+  const nhb=document.getElementById('navHelpBtn'); /* [v3-2] 하단 힌트에서 클릭으로 도움말 */
+  if(nhb)nhb.addEventListener('click',()=>toggleHelp());
+  /* [개선 24·25] 4초 아무 조작 없으면 하단 힌트·버튼 페이드 + 커서 숨김 (프로젝터 화면 청결) */
+  let _idleT=null;
+  function uiWake(){
+    document.body.classList.remove('uiIdle');
+    clearTimeout(_idleT);
+    _idleT=setTimeout(()=>document.body.classList.add('uiIdle'),4000);
+  }
+  ['mousemove','mousedown','keydown','touchstart'].forEach(ev=>addEventListener(ev,uiWake,{passive:true}));
+  uiWake();
+}
+
+</script>
+</body></html>
